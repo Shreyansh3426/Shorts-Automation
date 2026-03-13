@@ -1,26 +1,22 @@
 import sys
 import json
-import subprocess
+import asyncio
+import os
+import edge_tts
 
 VOICE = 'en-US-ChristopherNeural'
 
-def generate_voice(script_text, output_path):
-    clean = script_text.replace('"', '').replace("'", '').replace('—', ' ')
+async def generate_voice_async(script, output_path):
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    communicate = edge_tts.Communicate(script, VOICE)
+    await communicate.save(output_path)
 
-    result = subprocess.run([
-        '/home/shreyanshpandey/shorts-automation/venv/bin/edge-tts',
-        '--voice', VOICE,
-        '--text', clean,
-        '--write-media', output_path
-    ], capture_output=True, text=True)
-
-    if result.returncode != 0:
-        print('ERROR:', result.stderr)
-        sys.exit(1)
-
-    print(json.dumps({'voice_path': output_path, 'status': 'ok'}))
+def generate_voice(script, output_path):
+    asyncio.run(generate_voice_async(script, output_path))
+    return {'voice_path': output_path, 'status': 'ok'}
 
 if __name__ == '__main__':
     script = sys.argv[1]
-    output = sys.argv[2]
-    generate_voice(script, output)
+    output_path = sys.argv[2]
+    result = generate_voice(script, output_path)
+    print(json.dumps(result))

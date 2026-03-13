@@ -74,7 +74,7 @@ def run_pipeline(topic):
     print('\n[3/4] Fetching visuals...')
     try:
         def do_visuals():
-            return run_script('fetch_visuals.py', [json.dumps(keywords), job_id])
+            return run_script('fetch_visuals.py', [json.dumps(keywords), job_id, media_path])
         result = run_with_retry(do_visuals)
         clips = result['clips']
         if not clips:
@@ -103,7 +103,23 @@ def run_pipeline(topic):
         print(f'  FAILED: {e}')
         return None
 
-    print(f'\n✅ DONE — {output_path}')
+    # Stage 5 - Upload
+    print('\n[5/5] Uploading to YouTube...')
+    try:
+        from upload_youtube import upload_video
+        title = topic[:90] + ' #Shorts'
+        def do_upload():
+            result = json.loads(upload_video(output_path, title, script, keywords))
+            return result
+        result = run_with_retry(do_upload)
+        update_job(job_id, status='uploaded', youtube_id=result['video_id'])
+        print(f'  YouTube: {result["url"]}')
+    except Exception as e:
+        update_job(job_id, status='failed_upload', error=str(e))
+        print(f'  Upload FAILED: {e}')
+        return None
+
+    print(f'\n✅ DONE — {result["url"]}')
     return job_id
 
 if __name__ == '__main__':
