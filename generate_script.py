@@ -31,9 +31,11 @@ KEYWORDS: keyword1, keyword2, keyword3, keyword4"""
             'messages': [{'role': 'user', 'content': prompt}],
             'max_tokens': 400,
             'temperature': 0.8
-        }
+        },
+        timeout=30
     )
-
+    if response.status_code != 200:
+        raise Exception(f'Groq API error {response.status_code}: {response.text[:200]}')
     full_text = response.json()['choices'][0]['message']['content']
 
     if 'KEYWORDS:' in full_text:

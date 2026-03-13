@@ -2,9 +2,18 @@ import sys
 import json
 import asyncio
 import os
+import random
 import edge_tts
 
-VOICE = 'en-US-ChristopherNeural'
+VOICES = [
+    'en-US-ChristopherNeural',
+    'en-US-GuyNeural',
+    'en-US-EricNeural',
+    'en-GB-RyanNeural',
+    'en-AU-WilliamNeural',
+]
+
+VOICE = random.choice(VOICES)
 
 async def generate_voice_async(script, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

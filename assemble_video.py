@@ -25,7 +25,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
         subprocess.run([
             'ffmpeg', '-y', '-i', clip['path'],
             '-t', str(seg_duration),
-            '-vf', 'scale=1920:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30',
+            '-vf', f'scale=1920:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,zoompan=z=\'min(zoom+0.0015,1.5)\':d=1:x=\'iw/2-(iw/zoom/2)\':y=\'ih/2-(ih/zoom/2)\':s=1080x1920',
             '-an', '-c:v', 'libx264', '-preset', 'fast', '-crf', '23', out
         ], capture_output=True, check=True)
         processed.append(out)
@@ -76,7 +76,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
         'ffmpeg', '-y',
         '-i', bg_video,
         '-i', voice_path,
-        '-vf', f'subtitles={srt_path}',
+        '-vf', f"subtitles='{srt_path.replace(':', '\\:')}':force_style='FontSize=18,Bold=1,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2,MarginV=120'",
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
         '-c:a', 'aac', '-b:a', '192k',
         '-movflags', '+faststart',

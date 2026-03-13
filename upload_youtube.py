@@ -31,21 +31,20 @@ def get_youtube_client():
 def upload_video(video_path, title, description='', tags=None):
     if not os.path.exists(video_path):
         raise Exception(f'Video file not found: {video_path}')
-
     youtube = get_youtube_client()
-
     if tags is None:
         tags = ['shorts', 'facts', 'psychology']
-
+    if isinstance(tags, list):
+        tags = tags + ['shorts', 'facts']
     body = {
         'snippet': {
             'title': title[:100],
             'description': description + '\n\n#Shorts',
-            'tags': tags,
+            'tags': tags[:15],
             'categoryId': '22'
         },
         'status': {
-            'privacyStatus': 'private',
+            'privacyStatus': 'public',
             'selfDeclaredMadeForKids': False
         }
     }
