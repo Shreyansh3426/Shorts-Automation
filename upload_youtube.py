@@ -1,0 +1,85 @@
+import os
+import sys
+import json
+from dotenv import load_dotenv
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
+from googleapiclient.discovery import build
+from googleapiclient.http import MediaFileUpload
+
+load_dotenv()
+
+SCOPES = ['https://www.googleapis.com/auth/youtube.upload']
+CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), 'credentials.json')
+TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'youtube_token.json')
+
+def get_youtube_client():
+    creds = None
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+            creds = flow.run_local_server(port=8080)
+        with open(TOKEN_FILE, 'w') as f:
+            f.write(creds.to_json())
+    return build('youtube', 'v3', credentials=creds)
+
+def upload_video(video_path, title, description='', tags=None):
+    if not os.path.exists(video_path):
+        raise Exception(f'Video file not found: {video_path}')
+
+    youtube = get_youtube_client()
+
+    if tags is None:
+        tags = ['shorts', 'facts', 'psychology']
+
+    body = {
+        'snippet': {
+            'title': title[:100],
+            'description': description + '\n\n#Shorts',
+            'tags': tags,
+            'categoryId': '22'
+        },
+        'status': {
+            'privacyStatus': 'private',
+            'selfDeclaredMadeForKids': False
+        }
+    }
+
+    media = MediaFileUpload(
+        video_path,
+        mimetype='video/mp4',
+        resumable=True,
+        chunksize=1024*1024
+    )
+
+    print(f'Uploading: {title}')
+    request = youtube.videos().insert(
+        part='snippet,status',
+        body=body,
+        media_body=media
+    )
+
+    response = None
+    while response is None:
+        status, response = request.next_chunk()
+        if status:
+            print(f'  Progress: {int(status.progress() * 100)}%')
+
+    video_id = response['id']
+    video_url = f'https://youtube.com/shorts/{video_id}'
+    print(f'  Uploaded: {video_url}')
+
+    return json.dumps({'video_id': video_id, 'url': video_url, 'status': 'ok'})
+
+if __name__ == '__main__':
+    if len(sys.argv) < 3:
+        print('Usage: python3 upload_youtube.py <video_path> <title>')
+        sys.exit(1)
+    video_path = sys.argv[1]
+    title = sys.argv[2]
+    print(upload_video(video_path, title))
