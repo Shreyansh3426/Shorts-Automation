@@ -12,6 +12,7 @@ def get_conn():
 
 def init_db():
     conn = get_conn()
+    conn.execute('PRAGMA journal_mode=WAL;')
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,

@@ -124,7 +124,17 @@ def run_pipeline(topic):
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
-        print('Usage: python3 pipeline.py "your topic here"')
-        sys.exit(1)
-    topic = ' '.join(sys.argv[1:])
-    run_pipeline(topic)
+        from topic_queue import get_next_topic, mark_topic_used
+        topic_row = get_next_topic()
+        if not topic_row:
+            print('No topics in queue. Run: python3 topic_queue.py')
+            sys.exit(1)
+        topic = topic_row['title']
+        topic_id = topic_row['id']
+        print(f'Auto-picked topic from queue: {topic}')
+        result = run_pipeline(topic)
+        if result:
+            mark_topic_used(topic_id)
+    else:
+        topic = ' '.join(sys.argv[1:])
+        run_pipeline(topic)

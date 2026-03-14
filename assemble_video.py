@@ -48,25 +48,37 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     srt_path = f'{tmpdir}/subtitles.srt'
     from faster_whisper import WhisperModel
     model = WhisperModel('tiny', device='cpu', compute_type='int8')
-    segments, _ = model.transcribe(voice_path, language='en')
+    segments, _ = model.transcribe(voice_path, language='en', word_timestamps=True)
+    def fmt(t):
+        h = int(t // 3600)
+        m = int((t % 3600) // 60)
+        s = int(t % 60)
+        ms = int((t % 1) * 1000)
+        return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
+
     srt_lines = []
     counter = 1
     for seg in segments:
-        words = seg.text.strip().split()
-        chunk_size = 4
-        chunks = [words[i:i+chunk_size] for i in range(0, len(words), chunk_size)]
-        duration = (seg.end - seg.start) / len(chunks)
-        for j, chunk in enumerate(chunks):
-            start = seg.start + j * duration
-            end = start + duration
-            def fmt(t):
-                h = int(t // 3600)
-                m = int((t % 3600) // 60)
-                s = int(t % 60)
-                ms = int((t % 1) * 1000)
-                return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
-            srt_lines.append(f'{counter}\n{fmt(start)} --> {fmt(end)}\n{" ".join(chunk)}\n')
-            counter += 1
+        words = list(seg.words) if hasattr(seg, 'words') else []
+        if words:
+            # Use real word-level timestamps
+            for word in words:
+                text = word.word.strip()
+                if not text:
+                    continue
+                srt_lines.append(f'{counter}\n{fmt(word.start)} --> {fmt(word.end)}\n{text}\n')
+                counter += 1
+        else:
+            # Fallback to chunk method if no word timestamps
+            chunk_size = 4
+            word_list = seg.text.strip().split()
+            chunks = [word_list[i:i+chunk_size] for i in range(0, len(word_list), chunk_size)]
+            duration = (seg.end - seg.start) / max(len(chunks), 1)
+            for j, chunk in enumerate(chunks):
+                start = seg.start + j * duration
+                end = start + duration
+                srt_lines.append(f'{counter}\n{fmt(start)} --> {fmt(end)}\n{" ".join(chunk)}\n')
+                counter += 1
     with open(srt_path, 'w') as f:
         f.write('\n'.join(srt_lines))
     print('Subtitles generated')
