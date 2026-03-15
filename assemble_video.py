@@ -88,7 +88,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
         'ffmpeg', '-y',
         '-i', bg_video,
         '-i', voice_path,
-        '-vf', f"subtitles='{srt_path.replace(':', '\\:')}':force_style='FontSize=18,Bold=1,PrimaryColour=&HFFFFFF,OutlineColour=&H000000,Outline=2,MarginV=120'",
+        '-vf', 'subtitles=' + srt_path,
         '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
         '-c:a', 'aac', '-b:a', '192k',
         '-movflags', '+faststart',
