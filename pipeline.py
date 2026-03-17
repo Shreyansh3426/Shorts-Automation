@@ -119,8 +119,9 @@ def run_pipeline(topic):
         print(f'  Upload FAILED: {e}')
         return None
 
-    print(f'\n✅ DONE — {result["url"]}')
+    # Stage 5 - DISABLED FOR TESTING
     return job_id
+    print('\n[5/5] Uploading to YouTube...')
 
 if __name__ == '__main__':
     if len(sys.argv) < 2:
