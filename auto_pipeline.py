@@ -154,21 +154,39 @@ def run_pipeline(topic):
     ])
 
 
-# 🔥 MAIN
 def main():
-    init_db()   # ✅ CRITICAL FIX
+    print("🚀 Starting pipeline...")
 
+    # 🔥 FORCE DB INIT FIRST
+    init_db()
+    print("✅ DB initialized")
+
+    # 🔥 DEBUG: check table exists
+    conn = sqlite3.connect("shorts.db")
+    cur = conn.cursor()
+
+    try:
+        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics';")
+        table = cur.fetchone()
+        print("📊 Table exists:", table)
+    except Exception as e:
+        print("DB ERROR:", e)
+
+    conn.close()
+
+    # 🔥 NOW populate DB
     from trend_miner import mine_trends
     mine_trends()
+    print("✅ Trends mined")
 
+    # 🔥 NOW fetch topic
     topic = get_best_topic()
 
     if not topic:
-        print("No topic found")
+        print("❌ No topic found")
         return
 
     run_pipeline(topic)
-
 
 if __name__ == "__main__":
     main()
