@@ -1,19 +1,19 @@
 import os
 import sqlite3
-import re
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from datetime import datetime
 import isodate
+import re
 
-# Load environment variables
 load_dotenv()
 
 API_KEY = os.getenv("YOUTUBE_API_KEY")
-print("API KEY:", API_KEY)
 
-# Initialize YouTube API
 youtube = build("youtube", "v3", developerKey=API_KEY)
+
+# 🔥 FIXED DB PATH (CRITICAL)
+DB_PATH = os.path.join(os.path.dirname(__file__), "shorts.db")
 
 SEARCH_TERMS = [
     "science facts",
@@ -23,7 +23,7 @@ SEARCH_TERMS = [
 ]
 
 
-# 🔥 CLEAN FUNCTION
+# 🔥 CLEAN TOPIC EXTRACTION
 def extract_topic(title):
     title = title.lower()
 
@@ -36,29 +36,20 @@ def extract_topic(title):
     # remove special characters
     title = re.sub(r'[^a-zA-Z0-9\s]', '', title)
 
-    # remove extra spaces
-    title = re.sub(r'\s+', ' ', title)
-
     # remove junk words
-    junk_words = [
+    junk = [
         "viral", "trending", "shorts", "explained",
         "animation", "official", "video", "2024",
-        "america", "talent", "gift", "edit",
-        "store", "using", "stopped", "cool"
+        "edit"
     ]
 
-    for word in junk_words:
-        title = title.replace(word, "")
+    for j in junk:
+        title = title.replace(j, "")
 
     title = title.strip()
 
-    # too short = ignore
-    if len(title.split()) < 3:
+    if len(title) < 10:
         return None
-
-    # force hook style
-    if not title.startswith(("why", "how")):
-        title = "why " + title
 
     return title
 
@@ -66,8 +57,19 @@ def extract_topic(title):
 # 🔥 MAIN FUNCTION
 def mine_trends():
 
-    conn = sqlite3.connect("shorts.db")
+    conn = sqlite3.connect(DB_PATH)
     cur = conn.cursor()
+
+    # 🔥 ensure table exists (extra safety)
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS topics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT UNIQUE,
+        views INTEGER,
+        likes INTEGER,
+        created_at TEXT
+    )
+    """)
 
     for term in SEARCH_TERMS:
 
@@ -86,6 +88,7 @@ def mine_trends():
             video_id = item["id"]["videoId"]
             title = item["snippet"]["title"]
 
+            # 🔥 fetch stats
             stats = youtube.videos().list(
                 part="statistics,contentDetails",
                 id=video_id
@@ -100,60 +103,35 @@ def mine_trends():
                 stats["contentDetails"]["duration"]
             ).total_seconds()
 
-            # skip long videos
+            # only shorts
             if duration > 60:
                 continue
 
-            # clean topic
             topic = extract_topic(title)
 
             if not topic:
                 continue
 
-            # allow only science-related
-            allowed_keywords = [
-                "human", "body", "brain", "blood", "heart",
-                "animal", "cells", "science", "biology",
-                "why", "how"
-            ]
-
-            if not any(word in topic for word in allowed_keywords):
-                continue
-
-            # remove useless topics
-            banned_words = [
-                "magic", "trick", "talent", "gift",
-                "store", "ice cream", "pins"
-            ]
-
-            if any(word in topic for word in banned_words):
-                continue
-
-            # avoid duplicates
-            existing = cur.execute(
-                "SELECT topic FROM topics WHERE topic = ?",
-                (topic,)
-            ).fetchone()
-
-            if existing:
-                continue
-
-            # insert into DB
-            cur.execute("""
-            INSERT OR IGNORE INTO topics
-            (topic, views, likes, created_at)
-            VALUES (?, ?, ?, ?)
-            """, (
-                topic,
-                views,
-                likes,
-                datetime.utcnow()
-            ))
+            # 🔥 insert safely
+            try:
+                cur.execute("""
+                INSERT OR IGNORE INTO topics
+                (topic, views, likes, created_at)
+                VALUES (?, ?, ?, ?)
+                """, (
+                    topic,
+                    views,
+                    likes,
+                    datetime.utcnow().isoformat()
+                ))
+            except Exception as e:
+                print("Insert error:", e)
 
     conn.commit()
     conn.close()
 
+    print("✅ Trends stored successfully")
 
-# 🔥 RUN
+
 if __name__ == "__main__":
     mine_trends()
