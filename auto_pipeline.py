@@ -4,10 +4,29 @@ import os
 import time
 import subprocess
 from dotenv import load_dotenv
+from db import init_db
 
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+
+import sqlite3
+
+def init_db():
+    conn = sqlite3.connect("shorts.db")
+    cur = conn.cursor()
+
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS topics (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        topic TEXT,
+        score REAL DEFAULT 0,
+        used INTEGER DEFAULT 0
+    )
+    """)
+
+    conn.commit()
+    conn.close()
 
 
 # 🔥 SCORING SYSTEM
