@@ -158,6 +158,9 @@ def run_pipeline(topic):
 def main():
     init_db()   # ✅ CRITICAL FIX
 
+    from trend_miner import mine_trends
+    mine_trends()
+
     topic = get_best_topic()
 
     if not topic:
