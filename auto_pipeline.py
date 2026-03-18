@@ -4,14 +4,13 @@ import os
 import time
 import subprocess
 from dotenv import load_dotenv
-from db import init_db
 
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 
-import sqlite3
 
+# 🔥 INIT DB (FIXED WITH views COLUMN)
 def init_db():
     conn = sqlite3.connect("shorts.db")
     cur = conn.cursor()
@@ -20,6 +19,7 @@ def init_db():
     CREATE TABLE IF NOT EXISTS topics (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         topic TEXT,
+        views INTEGER DEFAULT 0,
         score REAL DEFAULT 0,
         used INTEGER DEFAULT 0
     )
@@ -156,6 +156,8 @@ def run_pipeline(topic):
 
 # 🔥 MAIN
 def main():
+    init_db()   # ✅ CRITICAL FIX
+
     topic = get_best_topic()
 
     if not topic:
