@@ -51,6 +51,13 @@ jobs:
           if [ -z "$PEXELS_API_KEY" ]; then echo "❌ PEXELS_API_KEY not set"; exit 1; fi
           echo "✅ All API keys configured"
 
+      - name: 🔐 Setup YouTube credentials
+        if: secrets.YOUTUBE_CREDENTIALS != ''
+        run: |
+          echo "🔓 Decoding YouTube credentials..."
+          echo "${{ secrets.YOUTUBE_CREDENTIALS }}" | base64 -d > credentials.json
+          echo "✅ Credentials file created"
+
       - name: 🎬 Run automation pipeline (Attempt 1)
         id: run_pipeline
         continue-on-error: true
