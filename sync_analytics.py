@@ -10,6 +10,7 @@ from datetime import datetime
 from dotenv import load_dotenv
 from db import init_db, get_conn
 from upload_youtube import get_youtube_client
+from alerts import send_failure_alert
 
 load_dotenv()
 
@@ -260,5 +261,6 @@ if __name__ == '__main__':
         print("\n⚠️  Interrupted by user")
     except Exception as e:
         print(f"\n❌ Fatal error: {e}")
+        send_failure_alert("analytics_sync", str(e), "analytics_loop")
         import traceback
         traceback.print_exc()

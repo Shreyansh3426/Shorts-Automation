@@ -47,6 +47,7 @@ jobs:
         continue-on-error: true
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
         run: |
           echo "🚀 Starting analytics sync..."
           python -u sync_analytics.py 2>&1 | tee analytics.log

@@ -5,6 +5,7 @@ import time
 import subprocess
 from db import init_db, create_job, update_job, get_job
 from ab_tester import generate_ab_variants
+from alerts import send_failure_alert
 
 MEDIA_DIR = os.path.join(os.path.dirname(__file__), 'media')
 SCRIPTS_DIR = os.path.dirname(__file__)
@@ -145,18 +146,24 @@ def run_pipeline(topic):
     return job_id
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        from topic_queue import get_next_topic, mark_topic_used
-        topic_row = get_next_topic()
-        if not topic_row:
-            print('No topics in queue. Run: python3 topic_queue.py')
-            sys.exit(1)
-        topic = topic_row['title']
-        topic_id = topic_row['id']
-        print(f'Auto-picked topic from queue: {topic}')
-        result = run_pipeline(topic)
-        if result:
-            mark_topic_used(topic_id)
-    else:
-        topic = ' '.join(sys.argv[1:])
-        run_pipeline(topic)
+    try:
+        if len(sys.argv) < 2:
+            from topic_queue import get_next_topic, mark_topic_used
+            topic_row = get_next_topic()
+            if not topic_row:
+                print('No topics in queue. Run: python3 topic_queue.py')
+                sys.exit(1)
+            topic = topic_row['title']
+            topic_id = topic_row['id']
+            print(f'Auto-picked topic from queue: {topic}')
+            result = run_pipeline(topic)
+            if result:
+                mark_topic_used(topic_id)
+        else:
+            topic = ' '.join(sys.argv[1:])
+            result = run_pipeline(topic)
+    except Exception as e:
+        job_id = os.getenv('CURRENT_JOB_ID', 'unknown')
+        stage = os.getenv('CURRENT_STAGE', 'orchestration')
+        send_failure_alert(job_id, str(e), stage)
+        raise
