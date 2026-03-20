@@ -80,17 +80,17 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     srt_lines = []
     ass_lines = []
 
-    # ASS HEADER (for styling)
+    # ASS HEADER (for styling) - VIRAL CENTERED SUBTITLES
     ass_header = """
 [Script Info]
 ScriptType: v4.00+
 
 [V4+ Styles]
-Format: Name,Fontname,Fontsize,PrimaryColour,OutlineColour,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV
-Style: Default,Arial Black,72,&H00FFFFFF,&H00000000,1,4,0,5,40,40,80
+Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
+Style: Default,Arial Black,80,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,2,10,0,0,0,1
 
 [Events]
-Format: Layer,Start,End,Style,Text
+Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 """
 
     ass_lines.append(ass_header)
@@ -100,28 +100,29 @@ Format: Layer,Start,End,Style,Text
     for seg in segments:
         words = [w.word.strip() for w in seg.words if w.word.strip()]
 
-        # Short center captions for punchy Shorts pacing
+        # Smart chunking: 2-4 words per chunk for readability
         chunk_size = 3
         chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
 
-        duration = (seg.end - seg.start) / max(len(chunks), 1)
+        if len(chunks) == 0:
+            continue
+
+        duration = (seg.end - seg.start) / len(chunks)
 
         for i, chunk in enumerate(chunks):
             start = seg.start + i * duration
             end = start + duration
 
-            text = " ".join(chunk)
-
-            styled_text = text.upper()
+            text = " ".join(chunk).upper()
 
             # SRT (fallback)
             srt_lines.append(
                 f'{counter}\n{fmt(start)} --> {fmt(end)}\n{text}\n'
             )
 
-            # ASS (styled subtitles)
+            # ASS (styled subtitles) - BOLD FORMAT WITH PROPER CENTERING
             ass_lines.append(
-                f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,{styled_text}"
+                f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}b1}}{text}{{{chr(92)}b0}}"
             )
 
             counter += 1
