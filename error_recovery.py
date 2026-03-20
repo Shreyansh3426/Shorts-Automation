@@ -20,15 +20,24 @@ def fix_sqlite_issues():
         conn = sqlite3.connect(db_path)
         conn.execute("PRAGMA integrity_check")
         
-        # Check topics table
+        # Check topics table schema
         cur = conn.cursor()
         cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
         
-        if not cur.fetchone():
-            print("⚠️  Topics table missing - recreating...")
-            from db import init_db
-            init_db()
-            print("✅ Topics table recreated")
+        if cur.fetchone():
+            # Table exists - check schema
+            cur.execute("PRAGMA table_info(topics)")
+            columns = {row[1] for row in cur.fetchall()}
+            required_columns = {'id', 'topic', 'views', 'likes', 'score', 'used', 'created_at'}
+            
+            if not required_columns.issubset(columns):
+                print("⚠️  Old schema detected - deleting and reinitializing...")
+                conn.close()
+                os.remove(db_path)
+                from db import init_db
+                init_db()
+                print("✅ Database schema updated")
+                return True
         
         conn.close()
         return True
@@ -41,6 +50,11 @@ def fix_sqlite_issues():
             # Delete corrupted DB
             if os.path.exists(db_path):
                 os.remove(db_path)
+            
+            # Also clean up WAL files
+            for wal_file in [db_path + '-wal', db_path + '-shm']:
+                if os.path.exists(wal_file):
+                    os.remove(wal_file)
             
             # Reinitialize
             from db import init_db

@@ -13,6 +13,25 @@ def get_conn():
 def init_db():
     conn = get_conn()
     conn.execute('PRAGMA journal_mode=WAL;')
+    
+    # Check if topics table exists
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
+    table_exists = cur.fetchone() is not None
+    
+    # If table exists, check if it has the correct schema
+    if table_exists:
+        cur.execute("PRAGMA table_info(topics)")
+        columns = {row[1] for row in cur.fetchall()}
+        required_columns = {'id', 'topic', 'views', 'likes', 'score', 'used', 'created_at'}
+        
+        # If schema is incomplete, drop and recreate
+        if not required_columns.issubset(columns):
+            print("⚠️  Old schema detected - migrating...")
+            cur.execute("DROP TABLE topics")
+            table_exists = False
+    
+    # Create tables if they don't exist
     conn.executescript('''
         CREATE TABLE IF NOT EXISTS jobs (
             id TEXT PRIMARY KEY,
@@ -49,7 +68,7 @@ def init_db():
     ''')
     conn.commit()
     conn.close()
-    print('Database initialized')
+    print('✅ Database initialized')
 
 def create_job(topic):
     import uuid
