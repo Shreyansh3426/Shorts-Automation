@@ -141,7 +141,20 @@ Format: Layer,Start,End,Style,Text
 
     # 🎵 Music
     music_dir = os.path.join(os.path.dirname(__file__), 'assets', 'music')
+    
+    # Ensure music directory exists
+    if not os.path.exists(music_dir):
+        print(f"⚠️  Music directory not found: {music_dir}")
+        print("📁 Creating music directory...")
+        os.makedirs(music_dir, exist_ok=True)
+    
     music_files = [f for f in os.listdir(music_dir) if f.endswith('.mp3')]
+    
+    if not music_files:
+        print("❌ No music files found in assets/music/")
+        print("   Please add at least one .mp3 file to assets/music/")
+        raise FileNotFoundError(f"No .mp3 files found in {music_dir}")
+    
     music_path = os.path.join(music_dir, random.choice(music_files))
 
     # 🎬 FINAL RENDER
