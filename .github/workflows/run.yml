@@ -115,6 +115,24 @@ jobs:
           echo "=== Pipeline Log ===" 
           if [ -f pipeline.log ]; then tail -20 pipeline.log; fi
 
+      - name: 💾 Persist database state (Git)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -f shorts.db ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add shorts.db
+            if git diff --cached --quiet; then
+              echo "✅ No changes to shorts.db"
+            else
+              git commit -m "📊 Auto-persist: Update database state after pipeline execution"
+              git push origin main 2>&1 || echo "⚠️ Push skipped (no changes or permission issue)"
+            fi
+          else
+            echo "⚠️ shorts.db not found - skipping persistence"
+          fi
+
       - name: 💾 Upload logs
         if: always()
         uses: actions/upload-artifact@v4

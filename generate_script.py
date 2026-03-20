@@ -11,46 +11,53 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
 def generate_script(topic):
     prompt = f"""
-Create a SHOCKING YouTube Shorts script (30 seconds) about:
+Create a SHOCKING YouTube Shorts script (15-16 seconds) about:
 
 {topic}
 
-RULES - FOR 30 SECOND VIDEO:
-- 3-4 sentences only (45-65 words total)
+RULES - FOR 15-16 SECOND VIDEO (HIGH ENGAGEMENT):
+- 3-4 sentences ONLY (50-60 words total for perfect pacing)
 - Starts with shocking hook: "Did you know...", "This is why...", "A GROUP OF...", "This is terrifying..."
 - Each sentence MORE shocking than previous
 - Build tension and intrigue throughout  
-- End with WOW moment or cliffhanger
-- Use simple words - max 18 words per sentence
+- CRITICAL: End with COMMENT BAIT question (e.g., "Have you ever seen this?", "Did this surprise you?", "Would you touch it?")
+- Use simple words - max 15 words per sentence
+- Keep language conversational and direct
 
 TONE & STYLE:
 - Science/nature facts (like IFL Science)
 - Shocking revelations - make viewers go "WAIT WHAT?!"
-- Urgent and gripping
-- Make them THINK and FEEL wonder
+- Urgent, gripping, personal
+- Make them THINK, FEEL wonder, WANT TO COMMENT
 
-PERFECT EXAMPLES (30 sec format):
+PERFECT EXAMPLES (15-16 sec format with comment bait):
 "A group of butterflies taste with their feet.
 They know if food is poison before eating it.
-Your tongue can only do one of those.
-You'll never see butterflies the same way again."
+Your tongue can NEVER do that.
+Have you ever noticed something this weird in nature?"
 
-"Your body has 37 trillion cells.
-But most of them aren't actually human.
-Bacteria outnumber your cells by millions.
-And they're in complete control of your health."
+"Your body has trillions of cells.
+But MOST aren't actually you.
+Bacteria control your health in ways you don't know.
+Are you creeped out yet? Comment below."
 
-"This is why plants should terrify you.
-One drop of sap causes extreme pain.
-Touching it feels like touching pure fire.
-And it's hiding in your local forest RIGHT NOW."
+"Plants hide weapons in their leaves.
+One drop causes extreme fire-like pain.
+It's growing in forests RIGHT NOW.
+Would you ever touch it? Tell me in comments."
+
+ENGAGEMENT MULTIPLIER:
+- Questions that make viewers WANT to comment
+- Reference personal experience ("Have you?", "Did you?")
+- Create conversation starters
+- Invite opinion or experience sharing
 
 NEVER:
 - Generic facts ("brains are complex")
-- Sentences over 20 words
+- Sentences over 15 words
 - Boring educational tone
-- Complex vocabulary
-- Forget the SHOCK and AWE factor
+- Vague vocabulary
+- Forget the SHOCK + COMMENT HOOK combo
 """
 
     url = 'https://api.groq.com/openai/v1/chat/completions'

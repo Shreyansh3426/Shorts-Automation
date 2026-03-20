@@ -36,7 +36,8 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             "scale=1920:1920:force_original_aspect_ratio=increase,"
             "crop=1080:1920,fps=30,"
             "zoompan=z='min(zoom+0.0015,1.5)':d=1:"
-            "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920",
+            "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920,"
+            "eq=brightness=0.01:saturation=1.05",
             '-an',
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -127,7 +128,8 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
 
     # 🎬 FINAL RENDER
     if music_path:
-        # Mix voice narration with background music (boosted)
+        # Professional sidechain ducking: Music volume ducks when voice is speaking
+        # Setup: Voice acts as sidechain input to compress background music
         ffmpeg_cmd = [
             'ffmpeg', '-y',
             '-i', bg_video,
@@ -135,12 +137,16 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             '-i', music_path,
 
             '-filter_complex',
-            '[2:a]volume=-12dB[m];[1:a][m]amix=inputs=2:duration=first[aout]',
+            # Sidechain ducking: music ducks automatically when voice is loud
+            '[2:a]aformat=sample_rates=44100[music];'
+            '[1:a]aformat=sample_rates=44100[voice];'
+            '[music][voice]acompressor=threshold=0.1:ratio=4:attack=50:release=200:makeup=3[music_compressed];'
+            '[voice][music_compressed]amix=inputs=2:duration=first[aout]',
 
             '-map', '0:v',
             '-map', '[aout]',
 
-            '-vf', f"subtitles={srt_path}",
+            '-vf', f"subtitles={srt_path}:force_style='MarginV=180'",
 
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -164,7 +170,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             '-map', '0:v',
             '-map', '1:a',
 
-            '-vf', f"subtitles={srt_path}",
+            '-vf', f"subtitles={srt_path}:force_style='MarginV=180'",
 
             '-c:v', 'libx264',
             '-preset', 'fast',
