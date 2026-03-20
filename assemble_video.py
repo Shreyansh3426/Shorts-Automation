@@ -80,14 +80,14 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     srt_lines = []
     ass_lines = []
 
-    # ASS HEADER - VIRAL SHORTS CAPTIONS (CLEAN & SMALL)
+    # ASS HEADER - ALEX HORMOZI VIRAL CAPTION STYLE
     ass_header = """
 [Script Info]
 ScriptType: v4.00+
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,Arial Black,24,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,0,2,60,60,140,1
+Style: Default,Arial Black,90,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,10,3,2,60,60,400,1
 
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
@@ -107,15 +107,19 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             # Use actual word start/end times from Whisper
             start = word.start
             end = word.end
+            
+            # Add small buffer for smoother transitions
+            display_start = max(0, start - 0.05)
+            display_end = end + 0.05
 
             # SRT (fallback)
             srt_lines.append(
-                f'{counter}\n{fmt(start)} --> {fmt(end)}\n{word_text}\n'
+                f'{counter}\n{fmt(display_start)} --> {fmt(display_end)}\n{word_text}\n'
             )
 
-            # ASS (styled subtitles) - USE ACTUAL WORD TIMING
+            # ASS with pop animation: scale 100->110->100 for punch effect
             ass_lines.append(
-                f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}b1}}{word_text}{{{chr(92)}b0}}"
+                f"Dialogue: 0,{fmt(display_start).replace(',', '.')},{fmt(display_end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}t(0,100,{{{chr(92)}k1}scale(110)}})}}}}}{word_text}"
             )
 
             counter += 1
