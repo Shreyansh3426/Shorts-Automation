@@ -1,6 +1,7 @@
 requests
 python-dotenv
 google-api-python-client
+google-auth-oauthlib
 isodate
 faster-whisper
 ffmpeg-python
