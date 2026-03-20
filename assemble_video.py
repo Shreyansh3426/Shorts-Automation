@@ -80,14 +80,14 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     srt_lines = []
     ass_lines = []
 
-    # ASS HEADER (for styling) - VIRAL CENTERED SUBTITLES
+    # ASS HEADER (for styling) - BOTTOM CAPTIONS LIKE VIRAL SHORTS
     ass_header = """
 [Script Info]
 ScriptType: v4.00+
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,Arial Black,80,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,5,2,10,0,0,0,1
+Style: Default,Arial Black,48,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,1,0,0,0,100,100,0,0,1,6,3,2,40,40,40,1
 
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
@@ -100,8 +100,8 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
     for seg in segments:
         words = [w.word.strip() for w in seg.words if w.word.strip()]
 
-        # Smart chunking: 2-4 words per chunk for readability
-        chunk_size = 3
+        # ONE WORD PER CAPTION for clean viral look
+        chunk_size = 1
         chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
 
         if len(chunks) == 0:
@@ -120,7 +120,7 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
                 f'{counter}\n{fmt(start)} --> {fmt(end)}\n{text}\n'
             )
 
-            # ASS (styled subtitles) - BOLD FORMAT WITH PROPER CENTERING
+            # ASS (styled subtitles) - BOTTOM POSITIONED, SMALL, BOLD
             ass_lines.append(
                 f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}b1}}{text}{{{chr(92)}b0}}"
             )
