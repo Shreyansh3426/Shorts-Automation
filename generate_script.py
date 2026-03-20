@@ -11,33 +11,46 @@ GROQ_API_KEY = os.getenv('GROQ_API_KEY')
 
 def generate_script(topic):
     prompt = f"""
-Create a HIGHLY ADDICTIVE YouTube Shorts script about:
+Create a SHOCKING YouTube Shorts script (30 seconds) about:
 
 {topic}
 
-RULES:
-- MAX 2 sentences ONLY
-- 15–25 words total
-- Sentence 1 = shocking hook
-- Sentence 2 = fast explanation + LOOP ending
-- Ending must feel incomplete and connect back to the hook
-- Make viewer feel like something is still unresolved
+RULES - FOR 30 SECOND VIDEO:
+- 3-4 sentences only (45-65 words total)
+- Starts with shocking hook: "Did you know...", "This is why...", "A GROUP OF...", "This is terrifying..."
+- Each sentence MORE shocking than previous
+- Build tension and intrigue throughout  
+- End with WOW moment or cliffhanger
+- Use simple words - max 18 words per sentence
 
-STYLE:
-- urgent
-- curiosity driven
-- slightly unsettling
-- simple words
+TONE & STYLE:
+- Science/nature facts (like IFL Science)
+- Shocking revelations - make viewers go "WAIT WHAT?!"
+- Urgent and gripping
+- Make them THINK and FEEL wonder
 
-GOOD EXAMPLES:
-"Your brain deletes memories every day.
-And you never notice what you just forgot."
+PERFECT EXAMPLES (30 sec format):
+"A group of butterflies taste with their feet.
+They know if food is poison before eating it.
+Your tongue can only do one of those.
+You'll never see butterflies the same way again."
 
-"Your body is slowly collapsing when you sit.
-And it’s happening right now."
+"Your body has 37 trillion cells.
+But most of them aren't actually human.
+Bacteria outnumber your cells by millions.
+And they're in complete control of your health."
 
-BAD:
-"Did you know the brain has many functions?"
+"This is why plants should terrify you.
+One drop of sap causes extreme pain.
+Touching it feels like touching pure fire.
+And it's hiding in your local forest RIGHT NOW."
+
+NEVER:
+- Generic facts ("brains are complex")
+- Sentences over 20 words
+- Boring educational tone
+- Complex vocabulary
+- Forget the SHOCK and AWE factor
 """
 
     url = 'https://api.groq.com/openai/v1/chat/completions'
@@ -50,8 +63,8 @@ BAD:
     data = {
         'model': 'llama-3.3-70b-versatile',
         'messages': [{'role': 'user', 'content': prompt}],
-        'max_tokens': 200,
-        'temperature': 0.9
+        'max_tokens': 250,
+        'temperature': 0.85
     }
 
     # 🔁 retry system (handles rate limits)
@@ -64,6 +77,7 @@ BAD:
             if "choices" in res:
                 text = res["choices"][0]["message"]["content"].strip()
                 text = clean_text(text)
+                text = enforce_script_length(topic, text)
 
                 result = {
                     'script': text,
@@ -82,8 +96,8 @@ BAD:
             print("Error:", e)
             time.sleep(2)
 
-    # ❌ fallback
-    fallback = f"{topic} is more dangerous than you think. And it might already be affecting you."
+    # ❌ fallback with shocking tone
+    fallback = f"This is shocking about {topic}. Most people don't know it. But it's happening right now. And you need to see this."
     result = {
         'script': fallback,
         'keywords': extract_keywords(fallback)
@@ -99,6 +113,62 @@ def clean_text(text):
     return text.strip()
 
 
+def enforce_script_length(topic, text):
+    words = [w for w in text.split() if w.strip()]
+    if len(words) >= 45:
+        return text
+
+    expand_prompt = f"""
+Rewrite this YouTube Shorts script to be 45-65 words in 3-4 short sentences.
+Keep same topic and shocking tone. Simple words only.
+
+Topic: {topic}
+Current script: {text}
+"""
+
+    url = 'https://api.groq.com/openai/v1/chat/completions'
+    headers = {
+        'Authorization': f'Bearer {GROQ_API_KEY}',
+        'Content-Type': 'application/json'
+    }
+    data = {
+        'model': 'llama-3.3-70b-versatile',
+        'messages': [{'role': 'user', 'content': expand_prompt}],
+        'max_tokens': 250,
+        'temperature': 0.7
+    }
+
+    try:
+        response = requests.post(url, headers=headers, json=data, timeout=30)
+        res = response.json()
+        if 'choices' in res:
+            expanded = clean_text(res['choices'][0]['message']['content'].strip())
+            expanded_words = [w for w in expanded.split() if w.strip()]
+            if len(expanded_words) >= 45:
+                return expanded
+    except Exception:
+        pass
+
+    fillers = [
+        "Most people discover this far too late.",
+        "Your body reacts before your brain even understands what happened.",
+        "Scientists still debate how this works in real life.",
+        "And this is happening around you right now."
+    ]
+
+    rebuilt = text.strip()
+    idx = 0
+    while len([w for w in rebuilt.split() if w.strip()]) < 45 and idx < len(fillers):
+        rebuilt = f"{rebuilt} {fillers[idx]}"
+        idx += 1
+
+    final_words = rebuilt.split()
+    if len(final_words) > 65:
+        rebuilt = " ".join(final_words[:65]).rstrip(".,!?") + "."
+
+    return rebuilt
+
+
 # 🧠 keyword extractor (for tags / visuals later)
 def extract_keywords(text):
     words = text.lower().split()
@@ -106,7 +176,8 @@ def extract_keywords(text):
     ignore = {
         "your", "this", "that", "with", "from",
         "have", "will", "been", "they", "them",
-        "about", "there", "their"
+        "about", "there", "their", "and", "but",
+        "why", "you", "are", "the", "is", "it"
     }
 
     keywords = [

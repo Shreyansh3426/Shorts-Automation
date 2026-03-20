@@ -2,6 +2,7 @@ import requests
 import os
 import time
 import subprocess
+import sys
 from dotenv import load_dotenv
 from db import init_db, get_conn
 
@@ -132,10 +133,10 @@ def run_pipeline(topic):
     print("\n🚀 Sending to pipeline...\n")
 
     subprocess.run([
-        "python",
+        sys.executable,
         "pipeline.py",
         topic
-    ])
+    ], check=True)
 
 
 # 🔥 MAIN

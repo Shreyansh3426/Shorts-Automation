@@ -87,7 +87,7 @@ ScriptType: v4.00+
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,OutlineColour,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV
-Style: Default,Arial,64,&H00FFFFFF,&H00000000,1,3,0,2,10,10,250
+Style: Default,Arial Black,72,&H00FFFFFF,&H00000000,1,4,0,5,40,40,80
 
 [Events]
 Format: Layer,Start,End,Style,Text
@@ -100,7 +100,7 @@ Format: Layer,Start,End,Style,Text
     for seg in segments:
         words = [w.word.strip() for w in seg.words if w.word.strip()]
 
-        # 🔥 chunk into 3-word phrases
+        # Short center captions for punchy Shorts pacing
         chunk_size = 3
         chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
 
@@ -112,12 +112,7 @@ Format: Layer,Start,End,Style,Text
 
             text = " ".join(chunk)
 
-            # 🎯 highlight last word
-            words_split = text.split()
-            if len(words_split) > 1:
-                words_split[-1] = f"{{\\c&H00FFFF&}}{words_split[-1]}{{\\c&HFFFFFF&}}"
-
-            styled_text = " ".join(words_split)
+            styled_text = text.upper()
 
             # SRT (fallback)
             srt_lines.append(

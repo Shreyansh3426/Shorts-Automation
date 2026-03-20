@@ -14,10 +14,11 @@ VOICES = [
 ]
 
 VOICE = random.choice(VOICES)
+VOICE_RATE = '-8%'
 
 async def generate_voice_async(script, output_path):
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    communicate = edge_tts.Communicate(script, VOICE)
+    communicate = edge_tts.Communicate(script, VOICE, rate=VOICE_RATE)
     await communicate.save(output_path)
 
 def generate_voice(script, output_path):
