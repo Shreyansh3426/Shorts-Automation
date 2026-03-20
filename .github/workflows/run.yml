@@ -52,7 +52,7 @@ jobs:
           echo "✅ All API keys configured"
 
       - name: 🔐 Setup YouTube credentials
-        if: secrets.YOUTUBE_CREDENTIALS != ''
+        continue-on-error: true
         run: |
           echo "🔓 Decoding YouTube credentials..."
           echo "${{ secrets.YOUTUBE_CREDENTIALS }}" | base64 -d > credentials.json
