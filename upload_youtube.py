@@ -8,6 +8,7 @@ from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
 from thumbnail_generator import generate_thumbnail
+from seo_optimizer import generate_seo_metadata
 
 load_dotenv()
 
@@ -47,7 +48,7 @@ def get_youtube_client():
         f.write(creds.to_json())
     return build('youtube', 'v3', credentials=creds)
 
-def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None):
+def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None, script='', keywords=None):
     if not os.path.exists(video_path):
         raise Exception(f'Video file not found: {video_path}')
     
@@ -58,13 +59,16 @@ def upload_video(video_path, title, description='', tags=None, job_id=None, topi
     if isinstance(tags, list):
         tags = tags + ['shorts', 'facts']
     
-    if job_id and topic and clips_json:
-        title = f"{topic.upper().replace('WHY DO ', '').replace('#SHORTS', '').strip()} 😱 #Shorts"[:100]
+    if job_id and topic and clips_json and script:
+        seo = generate_seo_metadata(topic, script, keywords)
+        title = seo['title']
+        description = seo['description']
+        tags = seo['tags']
     
     body = {
         'snippet': {
             'title': title[:100],
-            'description': description + '\n\n#Shorts',
+            'description': description if description and '#Shorts' in description else description + '\n\n#Shorts',
             'tags': tags[:15],
             'categoryId': '22'
         },

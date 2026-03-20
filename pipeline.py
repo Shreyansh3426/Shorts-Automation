@@ -109,7 +109,7 @@ def run_pipeline(topic):
         from upload_youtube import upload_video
         title = topic[:90] + ' #Shorts'
         def do_upload():
-            result = json.loads(upload_video(output_path, title, script, keywords, job_id=job_id, topic=topic, clips_json=clips))
+            result = json.loads(upload_video(output_path, title, description='', tags=None, job_id=job_id, topic=topic, clips_json=clips, script=script, keywords=keywords))
             return result
         result = run_with_retry(do_upload)
         update_job(job_id, status='uploaded', youtube_id=result['video_id'])
