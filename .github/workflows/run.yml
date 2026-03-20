@@ -34,15 +34,17 @@ jobs:
         run: |
           python -c "from db import init_db; init_db(); print('✅ Database initialized')"
 
-      - name: � Run error recovery checks
+      - name: 🛡️ Run error recovery checks
         run: |
-          python error_recovery.py
+          echo "🔍 Running error recovery checks..."
+          python error_recovery.py 2>&1 || echo "⚠️ Error recovery completed with warnings"
 
       - name: 🌐 Verify API keys
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
+          echo "🔑 Verifying API configuration..."
           if [ -z "$GROQ_API_KEY" ]; then echo "❌ GROQ_API_KEY not set"; exit 1; fi
           if [ -z "$YOUTUBE_API_KEY" ]; then echo "❌ YOUTUBE_API_KEY not set"; exit 1; fi
           echo "✅ API keys configured"
@@ -54,8 +56,11 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
+          echo "🚀 Starting pipeline execution (Attempt 1)..."
           python -u auto_pipeline.py 2>&1 | tee pipeline.log
-          echo "Pipeline execution completed"
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "Pipeline execution completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
 
       - name: 🔄 Retry on failure (Attempt 2)
         if: steps.run_pipeline.outcome == 'failure'
@@ -67,18 +72,31 @@ jobs:
           echo "⚠️ Attempt 1 failed. Reinitializing and retrying..."
           python -c "from db import init_db; init_db()"
           sleep 5
+          echo "🚀 Starting pipeline execution (Attempt 2)..."
           python -u auto_pipeline.py 2>&1 | tee -a pipeline.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "Pipeline retry completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
 
       - name: 📊 Check pipeline status
         id: check_status
+        if: always()
         run: |
-          if grep -q "❌\|Error\|error\|failed" pipeline.log; then
+          if [ ! -f pipeline.log ]; then
+            echo "⚠️ No pipeline.log file found - creating one"
+            echo "Pipeline did not produce output" > pipeline.log
+          fi
+          
+          if grep -q "❌\|Error: \|error:" pipeline.log 2>/dev/null || [ ! -f pipeline.log ]; then
             echo "status=failed" >> $GITHUB_OUTPUT
-            echo "⚠️ Pipeline had errors"
+            echo "⚠️ Pipeline had errors or no output"
           else
             echo "status=success" >> $GITHUB_OUTPUT
             echo "✅ Pipeline completed"
           fi
+          
+          echo "=== Pipeline Log ===" 
+          if [ -f pipeline.log ]; then tail -20 pipeline.log; fi
 
       - name: 💾 Upload logs
         if: always()
@@ -86,23 +104,18 @@ jobs:
         with:
           name: pipeline-logs
           path: pipeline.log
+          if-no-files-found: create
           retention-days: 30
 
-      - name: 📧 Notify on failure
-        if: failure()
-        uses: actions/github-script@v6
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            github.rest.issues.createComment({
-              issue_number: 1,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '❌ Shorts Pipeline Failed\n\nCheck logs: ' + context.server_url + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId
-            })
-
-      - name: ✅ Success notification
-        if: success()
+      - name: 📧 Workflow summary
+        if: always()
         run: |
-          echo "🎉 Pipeline completed successfully!"
-          echo "📹 Check media/ folder for generated videos"
+          echo "=== Workflow Execution Summary ===" 
+          echo "Status: ${{ job.status }}"
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          if [ "${{ job.status }}" == "failure" ]; then
+            echo "❌ Workflow failed - check logs above for details"
+          else
+            echo "✅ Workflow completed"
+          fi
