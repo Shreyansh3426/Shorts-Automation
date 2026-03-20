@@ -139,52 +139,79 @@ Format: Layer,Start,End,Style,Text
 
     print("Subtitles generated (viral style)")
 
-    # 🎵 Music
+    # 🎵 Music (Optional - check if available)
     music_dir = os.path.join(os.path.dirname(__file__), 'assets', 'music')
+    music_path = None
     
     # Ensure music directory exists
     if not os.path.exists(music_dir):
-        print(f"⚠️  Music directory not found: {music_dir}")
-        print("📁 Creating music directory...")
         os.makedirs(music_dir, exist_ok=True)
     
     music_files = [f for f in os.listdir(music_dir) if f.endswith('.mp3')]
     
-    if not music_files:
-        print("❌ No music files found in assets/music/")
-        print("   Please add at least one .mp3 file to assets/music/")
-        raise FileNotFoundError(f"No .mp3 files found in {music_dir}")
-    
-    music_path = os.path.join(music_dir, random.choice(music_files))
+    if music_files:
+        music_path = os.path.join(music_dir, random.choice(music_files))
+        print(f"🎵 Using background music: {os.path.basename(music_path)}")
+    else:
+        print("⚠️  No music files in assets/music/ - video will only have voice narration")
 
     # 🎬 FINAL RENDER
-    subprocess.run([
-        'ffmpeg', '-y',
-        '-i', bg_video,
-        '-i', voice_path,
-        '-i', music_path,
+    if music_path:
+        # Mix voice narration with background music
+        ffmpeg_cmd = [
+            'ffmpeg', '-y',
+            '-i', bg_video,
+            '-i', voice_path,
+            '-i', music_path,
 
-        '-filter_complex',
-        '[2:a]volume=-18dB[m];[1:a][m]amix=inputs=2:duration=first[aout]',
+            '-filter_complex',
+            '[2:a]volume=-18dB[m];[1:a][m]amix=inputs=2:duration=first[aout]',
 
-        '-map', '0:v',
-        '-map', '[aout]',
+            '-map', '0:v',
+            '-map', '[aout]',
 
-        # 🔥 USE ASS (not SRT)
-        '-vf', f"ass={ass_path}",
+            # 🔥 USE ASS (not SRT)
+            '-vf', f"ass={ass_path}",
 
-        '-c:v', 'libx264',
-        '-preset', 'fast',
-        '-crf', '23',
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
 
-        '-c:a', 'aac',
-        '-b:a', '192k',
+            '-c:a', 'aac',
+            '-b:a', '192k',
 
-        '-movflags', '+faststart',
-        '-shortest',
+            '-movflags', '+faststart',
+            '-shortest',
 
-        output_path
-    ], check=True)
+            output_path
+        ]
+    else:
+        # Use only voice narration (no background music)
+        ffmpeg_cmd = [
+            'ffmpeg', '-y',
+            '-i', bg_video,
+            '-i', voice_path,
+
+            '-map', '0:v',
+            '-map', '1:a',
+
+            # 🔥 USE ASS (not SRT)
+            '-vf', f"ass={ass_path}",
+
+            '-c:v', 'libx264',
+            '-preset', 'fast',
+            '-crf', '23',
+
+            '-c:a', 'aac',
+            '-b:a', '192k',
+
+            '-movflags', '+faststart',
+            '-shortest',
+
+            output_path
+        ]
+    
+    subprocess.run(ffmpeg_cmd, check=True)
 
     print(json.dumps({
         'video_path': output_path,
