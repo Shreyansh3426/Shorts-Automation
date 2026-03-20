@@ -7,6 +7,7 @@ from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
+from thumbnail_generator import generate_thumbnail
 
 load_dotenv()
 
@@ -46,14 +47,20 @@ def get_youtube_client():
         f.write(creds.to_json())
     return build('youtube', 'v3', credentials=creds)
 
-def upload_video(video_path, title, description='', tags=None):
+def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None):
     if not os.path.exists(video_path):
         raise Exception(f'Video file not found: {video_path}')
+    
     youtube = get_youtube_client()
+    
     if tags is None:
         tags = ['shorts', 'facts', 'psychology']
     if isinstance(tags, list):
         tags = tags + ['shorts', 'facts']
+    
+    if job_id and topic and clips_json:
+        title = f"{topic.upper().replace('WHY DO ', '').replace('#SHORTS', '').strip()} 😱 #Shorts"[:100]
+    
     body = {
         'snippet': {
             'title': title[:100],
@@ -90,6 +97,17 @@ def upload_video(video_path, title, description='', tags=None):
     video_id = response['id']
     video_url = f'https://youtube.com/shorts/{video_id}'
     print(f'  Uploaded: {video_url}')
+    
+    if job_id and topic and clips_json:
+        try:
+            thumbnail_path = generate_thumbnail(job_id, topic, clips_json)
+            youtube.thumbnails().set(
+                videoId=video_id,
+                media_body=MediaFileUpload(thumbnail_path, mimetype='image/jpeg')
+            ).execute()
+            print(f'  Thumbnail set: {thumbnail_path}')
+        except Exception as e:
+            print(f'  ⚠️  Thumbnail upload failed: {e}')
 
     return json.dumps({'video_id': video_id, 'url': video_url, 'status': 'ok'})
 
