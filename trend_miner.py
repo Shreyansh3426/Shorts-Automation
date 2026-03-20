@@ -1,19 +1,16 @@
 import os
-import sqlite3
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 from datetime import datetime
 import isodate
 import re
+from db import init_db, get_conn
 
 load_dotenv()
 
 API_KEY = os.getenv("YOUTUBE_API_KEY")
 
 youtube = build("youtube", "v3", developerKey=API_KEY)
-
-# 🔥 FIXED DB PATH (CRITICAL)
-DB_PATH = os.path.join(os.path.dirname(__file__), "shorts.db")
 
 SEARCH_TERMS = [
     "science facts",
@@ -56,20 +53,11 @@ def extract_topic(title):
 
 # 🔥 MAIN FUNCTION
 def mine_trends():
-
-    conn = sqlite3.connect(DB_PATH)
+    # Ensure DB is initialized
+    init_db()
+    
+    conn = get_conn()
     cur = conn.cursor()
-
-    # 🔥 ensure table exists (extra safety)
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS topics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        topic TEXT UNIQUE,
-        views INTEGER,
-        likes INTEGER,
-        created_at TEXT
-    )
-    """)
 
     for term in SEARCH_TERMS:
 

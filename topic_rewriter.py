@@ -1,8 +1,8 @@
-import sqlite3
 import requests
 import os
 import time
 from dotenv import load_dotenv
+from db import init_db, get_conn
 
 load_dotenv()
 
@@ -90,7 +90,10 @@ Rules:
 
 # 🔥 MAIN LOOP
 def rewrite_all():
-    conn = sqlite3.connect("shorts.db")
+    # Ensure DB is initialized before querying
+    init_db()
+    
+    conn = get_conn()
     cur = conn.cursor()
 
     rows = cur.execute("SELECT id, topic FROM topics").fetchall()

@@ -32,8 +32,9 @@ def init_db():
 
         CREATE TABLE IF NOT EXISTS topics (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT UNIQUE,
-            source TEXT DEFAULT 'manual',
+            topic TEXT UNIQUE,
+            views INTEGER DEFAULT 0,
+            likes INTEGER DEFAULT 0,
             score REAL DEFAULT 0,
             used INTEGER DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -85,17 +86,17 @@ def get_pending_jobs():
     conn.close()
     return [dict(r) for r in rows]
 
-def add_topic(title, source='manual'):
+def add_topic(topic, views=0, likes=0, source='manual'):
     conn = get_conn()
     try:
         conn.execute(
-            'INSERT INTO topics (title, source) VALUES (?, ?)',
-            (title, source)
+            'INSERT INTO topics (topic, views, likes, source) VALUES (?, ?, ?, ?)',
+            (topic, views, likes, source)
         )
         conn.commit()
-        print(f'Topic added: {title}')
+        print(f'Topic added: {topic}')
     except sqlite3.IntegrityError:
-        print(f'Topic already exists: {title}')
+        print(f'Topic already exists: {topic}')
     conn.close()
 
 if __name__ == '__main__':

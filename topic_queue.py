@@ -83,6 +83,7 @@ def get_next_topic():
     return dict(row) if row else None
 
 def mark_topic_used(topic_id):
+    init_db()
     conn = get_conn()
     conn.execute('UPDATE topics SET used = 1 WHERE id = ?', (topic_id,))
     conn.commit()

@@ -1,9 +1,11 @@
-import sqlite3
+from db import init_db, get_conn
 
 
 def score_topics():
-
-    conn = sqlite3.connect("shorts.db")
+    # Ensure DB is initialized before querying
+    init_db()
+    
+    conn = get_conn()
     cur = conn.cursor()
 
     rows = cur.execute("""

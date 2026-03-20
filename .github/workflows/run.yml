@@ -1,33 +1,108 @@
-name: Run Shorts Automation
+name: 🚀 Shorts Automation - Auto-Run & Self-Heal
 
 on:
   schedule:
-    - cron: "0 */6 * * *"   # every 6 hours
-  workflow_dispatch:        # manual run button
+    - cron: "0 */6 * * *"   # Every 6 hours
+  workflow_dispatch:        # Manual trigger button
+
+concurrency:
+  group: shorts-pipeline
+  cancel-in-progress: false
 
 jobs:
-  run:
+  auto-run:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 60
+    
     steps:
-      - name: Checkout repo
+      - name: 📦 Checkout repository
         uses: actions/checkout@v3
 
-      - name: Setup Python
+      - name: 🐍 Setup Python 3.10
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
+          cache: 'pip'
 
-      - name: Install dependencies
+      - name: 📥 Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          sudo apt update
-          sudo apt install -y ffmpeg
+          sudo apt update && sudo apt install -y ffmpeg
 
-      - name: Run automation
+      - name: 🗄️ Initialize database
+        run: |
+          python -c "from db import init_db; init_db(); print('✅ Database initialized')"
+
+      - name: � Run error recovery checks
+        run: |
+          python error_recovery.py
+
+      - name: 🌐 Verify API keys
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
         run: |
-          python auto_pipeline.py
+          if [ -z "$GROQ_API_KEY" ]; then echo "❌ GROQ_API_KEY not set"; exit 1; fi
+          if [ -z "$YOUTUBE_API_KEY" ]; then echo "❌ YOUTUBE_API_KEY not set"; exit 1; fi
+          echo "✅ API keys configured"
+
+      - name: 🎬 Run automation pipeline (Attempt 1)
+        id: run_pipeline
+        continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          python -u auto_pipeline.py 2>&1 | tee pipeline.log
+          echo "Pipeline execution completed"
+
+      - name: 🔄 Retry on failure (Attempt 2)
+        if: steps.run_pipeline.outcome == 'failure'
+        continue-on-error: true
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          echo "⚠️ Attempt 1 failed. Reinitializing and retrying..."
+          python -c "from db import init_db; init_db()"
+          sleep 5
+          python -u auto_pipeline.py 2>&1 | tee -a pipeline.log
+
+      - name: 📊 Check pipeline status
+        id: check_status
+        run: |
+          if grep -q "❌\|Error\|error\|failed" pipeline.log; then
+            echo "status=failed" >> $GITHUB_OUTPUT
+            echo "⚠️ Pipeline had errors"
+          else
+            echo "status=success" >> $GITHUB_OUTPUT
+            echo "✅ Pipeline completed"
+          fi
+
+      - name: 💾 Upload logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: pipeline-logs
+          path: pipeline.log
+          retention-days: 30
+
+      - name: 📧 Notify on failure
+        if: failure()
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              issue_number: 1,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '❌ Shorts Pipeline Failed\n\nCheck logs: ' + context.server_url + '/' + context.repo.owner + '/' + context.repo.repo + '/actions/runs/' + context.runId
+            })
+
+      - name: ✅ Success notification
+        if: success()
+        run: |
+          echo "🎉 Pipeline completed successfully!"
+          echo "📹 Check media/ folder for generated videos"

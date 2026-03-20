@@ -1,32 +1,13 @@
-import sqlite3
 import requests
 import os
 import time
 import subprocess
 from dotenv import load_dotenv
+from db import init_db, get_conn
 
 load_dotenv()
 
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
-
-
-# 🔥 INIT DB (FIXED WITH views COLUMN)
-def init_db():
-    conn = sqlite3.connect("shorts.db")
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS topics (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        topic TEXT,
-        views INTEGER DEFAULT 0,
-        score REAL DEFAULT 0,
-        used INTEGER DEFAULT 0
-    )
-    """)
-
-    conn.commit()
-    conn.close()
 
 
 # 🔥 SCORING SYSTEM
@@ -111,7 +92,10 @@ Return as a list.
 
 # 🔥 PICK BEST TOPIC
 def get_best_topic():
-    conn = sqlite3.connect("shorts.db")
+    # Ensure DB is initialized before querying
+    init_db()
+    
+    conn = get_conn()
     cur = conn.cursor()
 
     row = cur.execute("""
@@ -154,39 +138,36 @@ def run_pipeline(topic):
     ])
 
 
+# 🔥 MAIN
 def main():
     print("🚀 Starting pipeline...")
 
-    # 🔥 FORCE DB INIT FIRST
+    # ✅ STEP 1: init DB
     init_db()
     print("✅ DB initialized")
 
-    # 🔥 DEBUG: check table exists
-    conn = sqlite3.connect("shorts.db")
+    # ✅ STEP 2: check table
+    conn = get_conn()
     cur = conn.cursor()
-
-    try:
-        cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics';")
-        table = cur.fetchone()
-        print("📊 Table exists:", table)
-    except Exception as e:
-        print("DB ERROR:", e)
-
+    cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics';")
+    print("📊 Table exists:", cur.fetchone())
     conn.close()
 
-    # 🔥 NOW populate DB
+    # ✅ STEP 3: fill DB
     from trend_miner import mine_trends
     mine_trends()
     print("✅ Trends mined")
 
-    # 🔥 NOW fetch topic
+    # ✅ STEP 4: pick topic
     topic = get_best_topic()
 
     if not topic:
         print("❌ No topic found")
         return
 
+    # ✅ STEP 5: run pipeline
     run_pipeline(topic)
+
 
 if __name__ == "__main__":
     main()
