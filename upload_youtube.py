@@ -48,7 +48,7 @@ def get_youtube_client():
         f.write(creds.to_json())
     return build('youtube', 'v3', credentials=creds)
 
-def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None, script='', keywords=None):
+def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None, script='', keywords=None, variant_id=None):
     if not os.path.exists(video_path):
         raise Exception(f'Video file not found: {video_path}')
     
@@ -62,6 +62,8 @@ def upload_video(video_path, title, description='', tags=None, job_id=None, topi
     if job_id and topic and clips_json and script:
         seo = generate_seo_metadata(topic, script, keywords)
         title = seo['title']
+        if variant_id:
+            title = title.replace('😱', f' [{variant_id}] 😱')[:100]
         description = seo['description']
         tags = seo['tags']
     
@@ -104,7 +106,7 @@ def upload_video(video_path, title, description='', tags=None, job_id=None, topi
     
     if job_id and topic and clips_json:
         try:
-            thumbnail_path = generate_thumbnail(job_id, topic, clips_json)
+            thumbnail_path = generate_thumbnail(job_id, topic, clips_json, variant_id=variant_id)
             youtube.thumbnails().set(
                 videoId=video_id,
                 media_body=MediaFileUpload(thumbnail_path, mimetype='image/jpeg')

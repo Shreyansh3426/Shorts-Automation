@@ -6,7 +6,7 @@ from PIL import Image, ImageDraw, ImageFont
 logger = logging.getLogger(__name__)
 
 
-def generate_thumbnail(job_id: str, topic: str, clips_json: list[str]) -> str:
+def generate_thumbnail(job_id: str, topic: str, clips_json: list[str], variant_id: str | None = None) -> str:
     """
     Generates a high-CTR YouTube Shorts thumbnail using one of the clips.
     Returns the full path to thumbnail.jpg
@@ -24,6 +24,8 @@ def generate_thumbnail(job_id: str, topic: str, clips_json: list[str]) -> str:
         raise FileNotFoundError(f"Clip not found: {clip_path}")
     
     frame_path = os.path.join(job_folder, 'frame.jpg')
+    thumbnail_filename = f'thumbnail_{variant_id}.jpg' if variant_id else 'thumbnail.jpg'
+    thumbnail_path = os.path.join(job_folder, thumbnail_filename)
     
     try:
         subprocess.run([
@@ -96,7 +98,6 @@ def generate_thumbnail(job_id: str, topic: str, clips_json: list[str]) -> str:
         logger.error(f"❌ Text overlay failed: {e}")
         raise
     
-    thumbnail_path = os.path.join(job_folder, 'thumbnail.jpg')
     try:
         img.save(thumbnail_path, 'JPEG', quality=95, optimize=True)
         logger.info(f"✅ Thumbnail generated: {thumbnail_path}")
