@@ -1,5 +1,6 @@
 import os
 from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
 from dotenv import load_dotenv
 from datetime import datetime
 import isodate
@@ -60,63 +61,102 @@ def mine_trends():
     cur = conn.cursor()
 
     for term in SEARCH_TERMS:
+        try:
+            request = youtube.search().list(
+                part="snippet",
+                q=term,
+                maxResults=10,  # Reduced from 25 to save quota
+                type="video",
+                order="viewCount"
+            )
 
-        request = youtube.search().list(
-            part="snippet",
-            q=term,
-            maxResults=25,
-            type="video",
-            order="viewCount"
-        )
+            response = request.execute()
 
-        response = request.execute()
+            for item in response["items"]:
 
-        for item in response["items"]:
+                video_id = item["id"]["videoId"]
+                title = item["snippet"]["title"]
 
-            video_id = item["id"]["videoId"]
-            title = item["snippet"]["title"]
+                # 🔥 fetch stats
+                try:
+                    stats = youtube.videos().list(
+                        part="statistics,contentDetails",
+                        id=video_id
+                    ).execute()
+                except HttpError as e:
+                    if e.resp.status == 403 and 'quotaExceeded' in str(e):
+                        print(f"⚠️  Quota exceeded fetching stats. Using cached trends...")
+                        raise  # Re-raise to be caught by outer handler
+                    raise
 
-            # 🔥 fetch stats
-            stats = youtube.videos().list(
-                part="statistics,contentDetails",
-                id=video_id
-            ).execute()
+                stats = stats["items"][0]
 
-            stats = stats["items"][0]
+                views = int(stats["statistics"].get("viewCount", 0))
+                likes = int(stats["statistics"].get("likeCount", 0))
 
-            views = int(stats["statistics"].get("viewCount", 0))
-            likes = int(stats["statistics"].get("likeCount", 0))
+                duration = isodate.parse_duration(
+                    stats["contentDetails"]["duration"]
+                ).total_seconds()
 
-            duration = isodate.parse_duration(
-                stats["contentDetails"]["duration"]
-            ).total_seconds()
+                # only shorts
+                if duration > 60:
+                    continue
 
-            # only shorts
-            if duration > 60:
-                continue
+                topic = extract_topic(title)
 
-            topic = extract_topic(title)
+                if not topic:
+                    continue
 
-            if not topic:
-                continue
+                # 🔥 insert safely
+                try:
+                    cur.execute("""
+                    INSERT OR IGNORE INTO topics
+                    (topic, views, likes, created_at)
+                    VALUES (?, ?, ?, ?)
+                    """, (
+                        topic,
+                        views,
+                        likes,
+                        datetime.utcnow().isoformat()
+                    ))
+                except Exception as e:
+                    print("Insert error:", e)
 
-            # 🔥 insert safely
-            try:
-                cur.execute("""
-                INSERT OR IGNORE INTO topics
-                (topic, views, likes, created_at)
-                VALUES (?, ?, ?, ?)
-                """, (
-                    topic,
-                    views,
-                    likes,
-                    datetime.utcnow().isoformat()
-                ))
-            except Exception as e:
-                print("Insert error:", e)
+        except HttpError as e:
+            if e.resp.status == 403 and 'quotaExceeded' in str(e):
+                print(f"❌ YouTube API QUOTA EXCEEDED for term: '{term}'")
+                print(f"⏱️  Quota resets daily at midnight PT")
+                print(f"📚 Using cached trending topics from database...")
+                
+                # Fall back to cached trends from database (sorted by views)
+                try:
+                    cached = cur.execute("""
+                        SELECT topic, views, likes, created_at 
+                        FROM topics 
+                        ORDER BY views DESC 
+                        LIMIT 5
+                    """).fetchall()
+                    
+                    if cached:
+                        print(f"✅ Found {len(cached)} cached trending topics")
+                        for row in cached:
+                            print(f"   - {row[0]} ({row[1]} views)")
+                    else:
+                        print(f"⚠️  No cached topics available")
+                except Exception as db_err:
+                    print(f"Error reading cached topics: {db_err}")
+                
+                continue  # Skip to next search term
+            else:
+                # Different HTTP error, re-raise
+                raise
+        except Exception as e:
+            print(f"Unexpected error mining '{term}': {e}")
+            continue
 
     conn.commit()
     conn.close()
+    print("✅ Trend mining completed")
 
     print("✅ Trends stored successfully")
 
