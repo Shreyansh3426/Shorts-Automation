@@ -87,7 +87,7 @@ ScriptType: v4.00+
 
 [V4+ Styles]
 Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,Arial Black,28,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,0,2,60,60,120,1
+Style: Default,Arial Black,24,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,1,0,0,0,100,100,0,0,1,2,0,2,60,60,140,1
 
 [Events]
 Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
@@ -98,31 +98,24 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
     counter = 1
 
     for seg in segments:
-        words = [w.word.strip() for w in seg.words if w.word.strip()]
-
-        # ONE WORD PER CAPTION for clean viral look
-        chunk_size = 1
-        chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
-
-        if len(chunks) == 0:
-            continue
-
-        duration = (seg.end - seg.start) / len(chunks)
-
-        for i, chunk in enumerate(chunks):
-            start = seg.start + i * duration
-            end = start + duration
-
-            text = " ".join(chunk).upper()
+        # Use actual Whisper word-level timestamps for PERFECT sync
+        for word in seg.words:
+            word_text = word.word.strip().upper()
+            if not word_text:
+                continue
+            
+            # Use actual word start/end times from Whisper
+            start = word.start
+            end = word.end
 
             # SRT (fallback)
             srt_lines.append(
-                f'{counter}\n{fmt(start)} --> {fmt(end)}\n{text}\n'
+                f'{counter}\n{fmt(start)} --> {fmt(end)}\n{word_text}\n'
             )
 
-            # ASS (styled subtitles) - BOTTOM POSITIONED, SMALL, BOLD
+            # ASS (styled subtitles) - USE ACTUAL WORD TIMING
             ass_lines.append(
-                f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}b1}}{text}{{{chr(92)}b0}}"
+                f"Dialogue: 0,{fmt(start).replace(',', '.')},{fmt(end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}b1}}{word_text}{{{chr(92)}b0}}"
             )
 
             counter += 1
