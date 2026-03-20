@@ -15,6 +15,14 @@ CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), 'credentials.json')
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'youtube_token.json')
 
 def get_youtube_client():
+    # Check if credentials file exists (may not be available in GitHub Actions)
+    if not os.path.exists(CREDENTIALS_FILE):
+        raise FileNotFoundError(
+            f'YouTube credentials not found at {CREDENTIALS_FILE}. '
+            'This file is required for uploads (not available in CI/CD). '
+            'Videos will be created but cannot be uploaded from GitHub Actions.'
+        )
+    
     creds = None
     if os.path.exists(TOKEN_FILE):
         creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)

@@ -114,6 +114,10 @@ def run_pipeline(topic):
         result = run_with_retry(do_upload)
         update_job(job_id, status='uploaded', youtube_id=result['video_id'])
         print(f'  YouTube: {result["url"]}')
+    except FileNotFoundError as e:
+        # Credentials not available (expected in GitHub Actions)
+        update_job(job_id, status='completed', error='YouTube upload skipped - credentials not found')
+        print(f'  ⚠️  {e}')
     except Exception as e:
         update_job(job_id, status='failed_upload', error=str(e))
         print(f'  Upload FAILED: {e}')
