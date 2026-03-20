@@ -73,64 +73,41 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
         ms = int((t % 1) * 1000)
         return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
 
-    # 🎯 VIRAL STYLE SUBTITLES
+    # 🎯 WINNING SUBTITLE STYLE (4 words per line - 597 view winner!)
     srt_path = f'{tmpdir}/subs.srt'
-    ass_path = f'{tmpdir}/subs.ass'
 
     srt_lines = []
-    ass_lines = []
-
-    # ASS HEADER - ALEX HORMOZI VIRAL CAPTION STYLE
-    ass_header = """
-[Script Info]
-ScriptType: v4.00+
-
-[V4+ Styles]
-Format: Name,Fontname,Fontsize,PrimaryColour,SecondaryColour,OutlineColour,BackColour,Bold,Italic,Underline,StrikeOut,ScaleX,ScaleY,Spacing,Angle,BorderStyle,Outline,Shadow,Alignment,MarginL,MarginR,MarginV,Encoding
-Style: Default,Arial Black,90,&H00FFFFFF,&H00FFFFFF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,10,3,2,60,60,400,1
-
-[Events]
-Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
-"""
-
-    ass_lines.append(ass_header)
-
     counter = 1
 
     for seg in segments:
-        # Use actual Whisper word-level timestamps for PERFECT sync
-        for word in seg.words:
-            word_text = word.word.strip().upper()
-            if not word_text:
-                continue
-            
-            # Use actual word start/end times from Whisper
-            start = word.start
-            end = word.end
-            
-            # Add small buffer for smoother transitions
-            display_start = max(0, start - 0.05)
-            display_end = end + 0.05
+        words = [w.word.strip() for w in seg.words if w.word.strip()]
+        
+        if not words:
+            continue
 
-            # SRT (fallback)
+        # 4 words per line with EVEN timing split
+        chunk_size = 4
+        chunks = [words[i:i + chunk_size] for i in range(0, len(words), chunk_size)]
+        
+        # Divide segment duration evenly across chunks
+        duration = (seg.end - seg.start) / len(chunks)
+
+        for i, chunk in enumerate(chunks):
+            start = seg.start + i * duration
+            end = start + duration
+
+            text = " ".join(chunk)
+
+            # Simple SRT format - let FFmpeg handle styling
             srt_lines.append(
-                f'{counter}\n{fmt(display_start)} --> {fmt(display_end)}\n{word_text}\n'
+                f'{counter}\n{fmt(start)} --> {fmt(end)}\n{text}\n'
             )
-
-            # ASS with pop animation: scale 100->110->100 for punch effect
-            ass_lines.append(
-                f"Dialogue: 0,{fmt(display_start).replace(',', '.')},{fmt(display_end).replace(',', '.')},Default,,0,0,0,,{{{chr(92)}t(0,100,{{{chr(92)}k1}scale(110)}})}}}}}{word_text}"
-            )
-
             counter += 1
 
     with open(srt_path, 'w') as f:
         f.write('\n'.join(srt_lines))
 
-    with open(ass_path, 'w') as f:
-        f.write('\n'.join(ass_lines))
-
-    print("Subtitles generated (viral style)")
+    print("Subtitles generated (4-word formula)")
 
     # 🎵 Music (Optional - check if available)
     music_dir = os.path.join(os.path.dirname(__file__), 'assets', 'music')
@@ -150,7 +127,7 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
 
     # 🎬 FINAL RENDER
     if music_path:
-        # Mix voice narration with background music
+        # Mix voice narration with background music (boosted)
         ffmpeg_cmd = [
             'ffmpeg', '-y',
             '-i', bg_video,
@@ -158,13 +135,12 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             '-i', music_path,
 
             '-filter_complex',
-            '[2:a]volume=-18dB[m];[1:a][m]amix=inputs=2:duration=first[aout]',
+            '[2:a]volume=-12dB[m];[1:a][m]amix=inputs=2:duration=first[aout]',
 
             '-map', '0:v',
             '-map', '[aout]',
 
-            # 🔥 USE ASS (not SRT)
-            '-vf', f"ass={ass_path}",
+            '-vf', f"subtitles={srt_path}",
 
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -188,8 +164,7 @@ Format: Layer,Start,End,Style,Name,MarginL,MarginR,MarginV,Effect,Text
             '-map', '0:v',
             '-map', '1:a',
 
-            # 🔥 USE ASS (not SRT)
-            '-vf', f"ass={ass_path}",
+            '-vf', f"subtitles={srt_path}",
 
             '-c:v', 'libx264',
             '-preset', 'fast',
