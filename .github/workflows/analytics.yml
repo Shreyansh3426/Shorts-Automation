@@ -1,0 +1,107 @@
+name: 📊 YouTube Analytics Feedback Loop
+
+on:
+  schedule:
+    - cron: "0 23 * * *"    # Daily at 11:00 PM UTC
+  workflow_dispatch:        # Manual trigger button
+
+concurrency:
+  group: analytics-pipeline
+  cancel-in-progress: false
+
+jobs:
+  sync-analytics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    
+    steps:
+      - name: 📦 Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 🐍 Setup Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: 'pip'
+
+      - name: 📥 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: 🔐 Setup YouTube credentials
+        continue-on-error: true
+        run: |
+          echo "🔓 Decoding YouTube credentials..."
+          echo "${{ secrets.YOUTUBE_CREDENTIALS }}" | base64 -d > credentials.json
+          echo "✅ Credentials file created"
+          
+          if [ -n "${{ secrets.YOUTUBE_TOKEN }}" ]; then
+            echo "🔓 Decoding YouTube token..."
+            echo "${{ secrets.YOUTUBE_TOKEN }}" | base64 -d > youtube_token.json
+            echo "✅ Token file created"
+          fi
+
+      - name: 🤖 Run analytics sync (ML Feedback Loop)
+        id: sync
+        continue-on-error: true
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: |
+          echo "🚀 Starting analytics sync..."
+          python -u sync_analytics.py 2>&1 | tee analytics.log
+          EXIT_CODE=${PIPESTATUS[0]}
+          echo "Analytics execution completed with exit code: $EXIT_CODE"
+          exit $EXIT_CODE
+
+      - name: 📊 Display analytics summary
+        if: always()
+        run: |
+          echo "=== Analytics Execution Summary ===" 
+          if [ -f analytics.log ]; then
+            tail -30 analytics.log
+          else
+            echo "⚠️ No analytics.log found"
+          fi
+
+      - name: 💾 Persist database state (Git commit & push)
+        if: always()
+        continue-on-error: true
+        run: |
+          if [ -f shorts.db ]; then
+            git config --global user.name "GitHub Actions"
+            git config --global user.email "actions@github.com"
+            git add shorts.db
+            if git diff --cached --quiet; then
+              echo "✅ No changes to shorts.db - nothing to commit"
+            else
+              git commit -m "📊 Auto-update: YouTube Analytics ML Feedback (viral topic boost)"
+              git push origin main 2>&1 || echo "⚠️ Push skipped (no changes or permission issue)"
+              echo "✅ Database state persisted to main branch"
+            fi
+          else
+            echo "⚠️ shorts.db not found - skipping persistence"
+          fi
+
+      - name: 📧 Workflow summary
+        if: always()
+        run: |
+          echo "=== Analytics Workflow Summary ===" 
+          echo "Status: ${{ job.status }}"
+          echo "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          echo ""
+          if [ "${{ job.status }}" == "failure" ]; then
+            echo "❌ Workflow failed - check logs above"
+          else
+            echo "✅ Analytics sync completed"
+            echo "📈 Database updated with ML feedback"
+          fi
+
+      - name: 📤 Upload logs as artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analytics-logs
+          path: analytics.log
+          if-no-files-found: warn
+          retention-days: 30

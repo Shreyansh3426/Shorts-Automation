@@ -97,6 +97,15 @@ def init_db():
                 downloaded_at TIMESTAMP,
                 file_size INTEGER
             );
+
+            CREATE TABLE IF NOT EXISTS video_stats (
+                youtube_id TEXT PRIMARY KEY,
+                topic TEXT,
+                views INTEGER DEFAULT 0,
+                likes INTEGER DEFAULT 0,
+                comments INTEGER DEFAULT 0,
+                last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         ''')
         conn.commit()
         print('✅ Database initialized successfully')
