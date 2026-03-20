@@ -11,64 +11,101 @@ def get_conn():
     return conn
 
 def init_db():
-    conn = get_conn()
-    conn.execute('PRAGMA journal_mode=WAL;')
+    # Clean up any stale connections and WAL files
+    import glob
+    db_dir = os.path.dirname(DB_PATH)
     
-    # Check if topics table exists
+    # Try to remove WAL files if they exist (can cause migration issues)
+    for wal_file in glob.glob(os.path.join(db_dir, 'shorts.db-*')):
+        try:
+            os.remove(wal_file)
+        except:
+            pass
+    
+    conn = get_conn()
+    conn.execute('PRAGMA journal_mode=DELETE;')  # Use DELETE mode for safer migration
+    
+    # Check if topics table exists and validate schema
     cur = conn.cursor()
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
     table_exists = cur.fetchone() is not None
     
     # If table exists, check if it has the correct schema
+    needs_migration = False
     if table_exists:
         cur.execute("PRAGMA table_info(topics)")
         columns = {row[1] for row in cur.fetchall()}
         required_columns = {'id', 'topic', 'views', 'likes', 'score', 'used', 'created_at'}
         
-        # If schema is incomplete, drop and recreate
         if not required_columns.issubset(columns):
-            print("⚠️  Old schema detected - migrating...")
-            cur.execute("DROP TABLE topics")
-            table_exists = False
+            print(f"⚠️  Schema mismatch detected. Current: {columns}, Required: {required_columns}")
+            needs_migration = True
     
-    # Create tables if they don't exist
-    conn.executescript('''
-        CREATE TABLE IF NOT EXISTS jobs (
-            id TEXT PRIMARY KEY,
-            topic TEXT NOT NULL,
-            status TEXT DEFAULT 'pending',
-            script TEXT,
-            keywords TEXT,
-            voice_path TEXT,
-            clips_json TEXT,
-            video_path TEXT,
-            youtube_id TEXT,
-            error TEXT,
-            attempts INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS topics (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            topic TEXT UNIQUE,
-            views INTEGER DEFAULT 0,
-            likes INTEGER DEFAULT 0,
-            score REAL DEFAULT 0,
-            used INTEGER DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        );
-
-        CREATE TABLE IF NOT EXISTS clip_cache (
-            keyword TEXT PRIMARY KEY,
-            clip_path TEXT,
-            downloaded_at TIMESTAMP,
-            file_size INTEGER
-        );
-    ''')
-    conn.commit()
+    # Close connection before migration
     conn.close()
-    print('✅ Database initialized')
+    
+    # If migration needed, drop and recreate with fresh connection
+    if needs_migration:
+        print("🔄 Migrating topics table...")
+        conn = get_conn()
+        conn.execute('PRAGMA journal_mode=DELETE;')
+        try:
+            conn.execute("DROP TABLE IF EXISTS topics")
+            conn.commit()
+            print("✅ Old topics table dropped")
+        except Exception as e:
+            print(f"❌ Error dropping table: {e}")
+            conn.close()
+            raise
+        conn.close()
+    
+    # Create tables with fresh connection
+    conn = get_conn()
+    conn.execute('PRAGMA journal_mode=DELETE;')
+    
+    try:
+        conn.executescript('''
+            CREATE TABLE IF NOT EXISTS jobs (
+                id TEXT PRIMARY KEY,
+                topic TEXT NOT NULL,
+                status TEXT DEFAULT 'pending',
+                script TEXT,
+                keywords TEXT,
+                voice_path TEXT,
+                clips_json TEXT,
+                video_path TEXT,
+                youtube_id TEXT,
+                error TEXT,
+                attempts INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS topics (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                topic TEXT UNIQUE,
+                views INTEGER DEFAULT 0,
+                likes INTEGER DEFAULT 0,
+                score REAL DEFAULT 0,
+                used INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS clip_cache (
+                keyword TEXT PRIMARY KEY,
+                clip_path TEXT,
+                downloaded_at TIMESTAMP,
+                file_size INTEGER
+            );
+        ''')
+        conn.commit()
+        print('✅ Database initialized successfully')
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+        conn.close()
+        raise
+    finally:
+        conn.close()
 
 def create_job(topic):
     import uuid
@@ -109,13 +146,15 @@ def add_topic(topic, views=0, likes=0, source='manual'):
     conn = get_conn()
     try:
         conn.execute(
-            'INSERT INTO topics (topic, views, likes, source) VALUES (?, ?, ?, ?)',
-            (topic, views, likes, source)
+            'INSERT INTO topics (topic, views, likes) VALUES (?, ?, ?)',
+            (topic, views, likes)
         )
         conn.commit()
-        print(f'Topic added: {topic}')
+        print(f'✅ Topic added: {topic}')
     except sqlite3.IntegrityError:
-        print(f'Topic already exists: {topic}')
+        print(f'ℹ️  Topic already exists: {topic}')
+    except Exception as e:
+        print(f'❌ Error adding topic: {e}')
     conn.close()
 
 if __name__ == '__main__':
