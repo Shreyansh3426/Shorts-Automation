@@ -43,11 +43,13 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
           echo "🔑 Verifying API configuration..."
           if [ -z "$GROQ_API_KEY" ]; then echo "❌ GROQ_API_KEY not set"; exit 1; fi
           if [ -z "$YOUTUBE_API_KEY" ]; then echo "❌ YOUTUBE_API_KEY not set"; exit 1; fi
-          echo "✅ API keys configured"
+          if [ -z "$PEXELS_API_KEY" ]; then echo "❌ PEXELS_API_KEY not set"; exit 1; fi
+          echo "✅ All API keys configured"
 
       - name: 🎬 Run automation pipeline (Attempt 1)
         id: run_pipeline
@@ -55,6 +57,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
           echo "🚀 Starting pipeline execution (Attempt 1)..."
           python -u auto_pipeline.py 2>&1 | tee pipeline.log
@@ -68,6 +71,7 @@ jobs:
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
         run: |
           echo "⚠️ Attempt 1 failed. Reinitializing and retrying..."
           python -c "from db import init_db; init_db()"
@@ -104,7 +108,7 @@ jobs:
         with:
           name: pipeline-logs
           path: pipeline.log
-          if-no-files-found: create
+          if-no-files-found: warn
           retention-days: 30
 
       - name: 📧 Workflow summary
