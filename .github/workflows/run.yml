@@ -57,6 +57,12 @@ jobs:
           echo "🔓 Decoding YouTube credentials..."
           echo "${{ secrets.YOUTUBE_CREDENTIALS }}" | base64 -d > credentials.json
           echo "✅ Credentials file created"
+          
+          if [ -n "${{ secrets.YOUTUBE_TOKEN }}" ]; then
+            echo "🔓 Decoding YouTube token..."
+            echo "${{ secrets.YOUTUBE_TOKEN }}" | base64 -d > youtube_token.json
+            echo "✅ Token file created"
+          fi
 
       - name: 🎬 Run automation pipeline (Attempt 1)
         id: run_pipeline

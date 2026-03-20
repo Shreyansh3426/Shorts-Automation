@@ -15,7 +15,16 @@ CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), 'credentials.json')
 TOKEN_FILE = os.path.join(os.path.dirname(__file__), 'youtube_token.json')
 
 def get_youtube_client():
-    # Check if credentials file exists (may not be available in GitHub Actions)
+    # Check if we have a pre-authorized token (for GitHub Actions)
+    if os.path.exists(TOKEN_FILE):
+        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
+        # Refresh if expired
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        if creds and creds.valid:
+            return build('youtube', 'v3', credentials=creds)
+    
+    # Check if credentials file exists for new OAuth flow (local only)
     if not os.path.exists(CREDENTIALS_FILE):
         raise FileNotFoundError(
             f'YouTube credentials not found at {CREDENTIALS_FILE}. '
@@ -23,17 +32,18 @@ def get_youtube_client():
             'Videos will be created but cannot be uploaded from GitHub Actions.'
         )
     
-    creds = None
-    if os.path.exists(TOKEN_FILE):
-        creds = Credentials.from_authorized_user_file(TOKEN_FILE, SCOPES)
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
-            creds = flow.run_local_server(port=8080)
-        with open(TOKEN_FILE, 'w') as f:
-            f.write(creds.to_json())
+    # Only run browser flow in local environment (has display)
+    if os.environ.get('CI') or not os.environ.get('DISPLAY'):
+        raise RuntimeError(
+            'Running in headless environment. YouTube token (youtube_token.json) required. '
+            'Run locally with credentials.json to generate token, then add to GitHub Secrets.'
+        )
+    
+    # Local browser-based flow
+    flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+    creds = flow.run_local_server(port=8080)
+    with open(TOKEN_FILE, 'w') as f:
+        f.write(creds.to_json())
     return build('youtube', 'v3', credentials=creds)
 
 def upload_video(video_path, title, description='', tags=None):
