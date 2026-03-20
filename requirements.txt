@@ -4,3 +4,5 @@ google-api-python-client
 isodate
 faster-whisper
 ffmpeg-python
+edge_tts
+groq
