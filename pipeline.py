@@ -66,8 +66,8 @@ def run_pipeline(topic):
         print(f'  ⚠️  A/B generation failed, using base script only')
         variants = [{"variant": "BASE", "script": script, "title_hook": ""}]
 
-    # Process only first variant for now (toggle AB_MODE=True to enable all 3)
-    AB_MODE = False  # Set to True after tomorrow's results
+    # Process all variants (A/B/C testing active)
+    AB_MODE = True  # All variants uploaded per topic
     variants_to_process = variants if AB_MODE else [variants[0]]
     
     for variant_idx, variant in enumerate(variants_to_process):

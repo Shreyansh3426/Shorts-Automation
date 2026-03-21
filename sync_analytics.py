@@ -177,9 +177,12 @@ def apply_ml_feedback(youtube_id, topic, views, likes, comments):
 def main():
     """
     Main function: Orchestrates the entire analytics sync pipeline.
+    Tracks A/B variant performance for winning variant selection.
     """
     # Initialize database (creates video_stats table if needed)
     init_db()
+    
+    variant_performance = {"A": [], "B": [], "C": []}  # Track variant metrics
     
     # Step 1: Fetch all uploaded jobs with youtube_id
     print("\n📋 Step 1: Fetching uploaded jobs from database...")
@@ -231,6 +234,13 @@ def main():
     for youtube_id, stat in stats.items():
         topic = youtube_map.get(youtube_id, 'unknown')
         
+        # Extract variant marker [A], [B], or [C] from topic if present
+        variant = None
+        variant_match = re.search(r'\[([ABC])\]', topic)
+        if variant_match:
+            variant = variant_match.group(1)
+            variant_performance[variant].append(stat['views'])
+        
         apply_ml_feedback(
             youtube_id,
             topic,
@@ -244,7 +254,18 @@ def main():
     
     print(f"\n✅ ML feedback applied to {feedback_count} viral videos")
     
-    # Step 5: Summary
+    # Step 5: Show variant performance summary
+    print("\n🧪 VARIANT PERFORMANCE SUMMARY:")
+    for variant in ["A", "B", "C"]:
+        if variant_performance[variant]:
+            avg_views = sum(variant_performance[variant]) / len(variant_performance[variant])
+            max_views = max(variant_performance[variant])
+            count = len(variant_performance[variant])
+            print(f"   Variant {variant}: {count} videos, avg {avg_views:.0f} views, max {max_views} views")
+        else:
+            print(f"   Variant {variant}: No data yet")
+    
+    # Step 6: Summary
     print("\n" + "=" * 70)
     print("✅ ANALYTICS SYNC COMPLETE")
     print(f"   📊 Videos processed: {len(stats)}")

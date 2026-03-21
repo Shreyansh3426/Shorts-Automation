@@ -65,7 +65,7 @@ def mine_trends():
             request = youtube.search().list(
                 part="snippet",
                 q=term,
-                maxResults=10,  # Reduced from 25 to save quota
+                maxResults=5,  # Minimal to preserve quota (search = 100 units/call)
                 type="video",
                 order="viewCount"
             )
