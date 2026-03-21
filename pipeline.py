@@ -12,6 +12,7 @@ from auto_repair import AutoRepair, retry_with_backoff
 from anomaly_detector import AnomalyDetector, format_anomaly_report, get_recommendations
 from run_validator import RunValidator, format_validation_report
 from quality_dashboard import QualityDashboard, format_dashboard, get_alerts_from_dashboard
+from performance_optimizer import PerformanceOptimizer, format_optimization_report
 
 MEDIA_DIR = os.path.join(os.path.dirname(__file__), 'media')
 SCRIPTS_DIR = os.path.dirname(__file__)
@@ -50,6 +51,7 @@ def run_pipeline(topic):
     auto_repair = AutoRepair()
     validator = RunValidator(media_path)
     dashboard = QualityDashboard(SCRIPTS_DIR)
+    optimizer = PerformanceOptimizer(SCRIPTS_DIR)
     
     pipeline_start_time = time.time()
 
@@ -58,6 +60,14 @@ def run_pipeline(topic):
     
     # Check system resources before starting
     diagnostics.check_system_resources()
+    
+    # Apply performance optimizations before starting
+    current_metrics = diagnostics.metrics.get("system", {})
+    optimization_result = optimizer.apply_optimizations(current_metrics)
+    if optimization_result["applied"]:
+        print('\n🔧 OPTIMIZATIONS APPLIED:')
+        for opt in optimization_result["applied"]:
+            print(f'  • {opt["type"]}: {opt["status"]}')
 
     # Stage 1 - Script
     print('\n[1/4] Generating script...')
@@ -259,6 +269,22 @@ def run_pipeline(topic):
             print('\n🚨 Dashboard Alerts:')
             for alert in alerts:
                 print(f'  [{alert["severity"].upper()}] {alert["message"]}')
+    
+    # Generate optimization suggestions
+    current_scores = dashboard.get_health_score()
+    optimization_suggestions = {
+        "reliability": current_scores.get("reliability", 0),
+        "content": current_scores.get("content_quality", 0),
+        "performance": current_scores.get("performance", 0),
+        "system": current_scores.get("system", 0),
+        "disk_usage_percent": report.get("system", {}).get("disk_usage_percent", 0),
+        "error_rate": report.get("error_count", 0),
+        "engagement_rate": dashboard.metrics["content_metrics"]["avg_engagement_rate"]
+    }
+    
+    opt_report = optimizer.generate_optimization_report(optimization_suggestions)
+    if opt_report["optimization_suggestions"]:
+        print(format_optimization_report(opt_report))
     
     print(f'\n✅ Job complete: {job_id}')
     return job_id

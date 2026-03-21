@@ -2,6 +2,7 @@ def generate_ab_variants(topic: str, base_script: str, keywords: list[str]) -> l
     """
     Returns list of 3 variant dicts for A/B testing.
     Each variant has different hook + ending question + unique title hook.
+    Includes engagement scoring for each variant.
     """
     
     # Extract core facts from base script (skip first sentence, keep middle-end)
@@ -29,23 +30,41 @@ def generate_ab_variants(topic: str, base_script: str, keywords: list[str]) -> l
     script_c = f"{hook_c} {core_facts} {question_c}"[:180].strip()
     title_hook_c = f"3 REASONS {topic}"
     
+    # Calculate engagement scores
+    def score_engagement(script):
+        score = 0.5
+        power_words = ["shocking", "terrifying", "unbelievable", "insane", "exposed", "revealed"]
+        script_lower = script.lower()
+        for word in power_words:
+            if word in script_lower:
+                score += 0.15
+        if "?" in script:
+            score += 0.1
+        import re
+        if re.search(r'\d+', script):
+            score += 0.1
+        return min(1.0, score)
+    
     return [
         {
             "variant": "A",
             "script": script_a,
             "title_hook": title_hook_a,
-            "hook_name": "Shock"
+            "hook_name": "Shock",
+            "engagement_score": score_engagement(script_a)
         },
         {
             "variant": "B",
             "script": script_b,
             "title_hook": title_hook_b,
-            "hook_name": "Curiosity"
+            "hook_name": "Curiosity",
+            "engagement_score": score_engagement(script_b)
         },
         {
             "variant": "C",
             "script": script_c,
             "title_hook": title_hook_c,
-            "hook_name": "Number"
+            "hook_name": "Number",
+            "engagement_score": score_engagement(script_c)
         }
     ]
