@@ -234,12 +234,28 @@ def main():
     for youtube_id, stat in stats.items():
         topic = youtube_map.get(youtube_id, 'unknown')
         
-        # Extract variant marker [A], [B], or [C] from topic if present
+        # Extract variant marker: [A]/[B]/[C] OR hook name (TERRIFYING/SHOCKING/3 REASONS)
         variant = None
+        
+        # Check for [A], [B], [C] markers first
         variant_match = re.search(r'\[([ABC])\]', topic)
         if variant_match:
             variant = variant_match.group(1)
-            variant_performance[variant].append(stat['views'])
+        # Check for new hook-based titles
+        elif 'TERRIFYING' in topic.upper():
+            variant = 'A'
+        elif 'SHOCKING' in topic.upper():
+            variant = 'B'
+        elif '3 REASONS' in topic.upper() or '3 REASONS' in topic:
+            variant = 'C'
+        
+        if variant:
+            variant_performance[variant].append({
+                'views': stat['views'],
+                'likes': stat['likes'],
+                'comments': stat['comments'],
+                'youtube_id': youtube_id
+            })
         
         apply_ml_feedback(
             youtube_id,
@@ -254,16 +270,60 @@ def main():
     
     print(f"\n✅ ML feedback applied to {feedback_count} viral videos")
     
-    # Step 5: Show variant performance summary
-    print("\n🧪 VARIANT PERFORMANCE SUMMARY:")
+    # Step 5: Detailed variant performance analysis with winner detection
+    print("\n🧪 A/B TEST RESULTS - VARIANT PERFORMANCE ANALYSIS:")
+    print("=" * 70)
+    
+    variant_summary = {}
     for variant in ["A", "B", "C"]:
         if variant_performance[variant]:
-            avg_views = sum(variant_performance[variant]) / len(variant_performance[variant])
-            max_views = max(variant_performance[variant])
-            count = len(variant_performance[variant])
-            print(f"   Variant {variant}: {count} videos, avg {avg_views:.0f} views, max {max_views} views")
+            data = variant_performance[variant]
+            views_list = [d['views'] for d in data]
+            likes_list = [d['likes'] for d in data]
+            comments_list = [d['comments'] for d in data]
+            
+            avg_views = sum(views_list) / len(views_list)
+            avg_likes = sum(likes_list) / len(likes_list)
+            avg_comments = sum(comments_list) / len(comments_list)
+            total_views = sum(views_list)
+            engagement_rate = (sum(likes_list) + sum(comments_list)) / total_views * 100 if total_views > 0 else 0
+            
+            variant_summary[variant] = {
+                'count': len(data),
+                'avg_views': avg_views,
+                'avg_likes': avg_likes,
+                'avg_comments': avg_comments,
+                'total_views': total_views,
+                'engagement_rate': engagement_rate,
+                'max_views': max(views_list)
+            }
+            
+            variant_names = {'A': 'Shock (TERRIFYING)', 'B': 'Curiosity (SHOCKING)', 'C': 'Number (3 REASONS)'}
+            print(f"\n   Variant {variant} - {variant_names.get(variant, 'Unknown')}:")
+            print(f"      Videos: {len(data)}")
+            print(f"      Total Views: {total_views}")
+            print(f"      Avg Views/Video: {avg_views:.0f}")
+            print(f"      Avg Likes: {avg_likes:.0f}")
+            print(f"      Avg Comments: {avg_comments:.0f}")
+            print(f"      Engagement Rate: {engagement_rate:.1f}%")
+            print(f"      Peak Views: {max(views_list)}")
         else:
-            print(f"   Variant {variant}: No data yet")
+            print(f"\n   Variant {variant}: No data yet")
+            variant_summary[variant] = {}
+    
+    # Determine winner by engagement rate (likes + comments / views)
+    if variant_summary:
+        winner_variant = max(
+            [(v, data['engagement_rate']) for v, data in variant_summary.items() if data],
+            key=lambda x: x[1],
+            default=(None, 0)
+        )[0]
+        
+        if winner_variant and variant_summary[winner_variant]:
+            print(f"\n🏆 WINNER: Variant {winner_variant} (Highest Engagement Rate: {variant_summary[winner_variant]['engagement_rate']:.1f}%)")
+            print(f"   Boost recommendation: Increase score for this variant's keywords")
+        else:
+            print(f"\n⏳ Not enough data yet to determine winner. Check back in 24-48 hours.")
     
     # Step 6: Summary
     print("\n" + "=" * 70)
@@ -271,6 +331,7 @@ def main():
     print(f"   📊 Videos processed: {len(stats)}")
     print(f"   🔥 Viral events (>500 views): {feedback_count}")
     print(f"   📈 Topics boosted: Based on keyword matching from viral videos")
+    print(f"   🧪 A/B Tests: {sum(len(v) for v in variant_performance.values())} variant videos tracked")
     print(f"⏰ Completed: {datetime.now().isoformat()}")
     print("=" * 70)
 

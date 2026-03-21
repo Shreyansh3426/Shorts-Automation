@@ -48,7 +48,7 @@ def get_youtube_client():
         f.write(creds.to_json())
     return build('youtube', 'v3', credentials=creds)
 
-def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None, script='', keywords=None, variant_id=None):
+def upload_video(video_path, title, description='', tags=None, job_id=None, topic=None, clips_json=None, script='', keywords=None, variant_id=None, title_hook=None):
     if not os.path.exists(video_path):
         raise Exception(f'Video file not found: {video_path}')
     
@@ -62,7 +62,11 @@ def upload_video(video_path, title, description='', tags=None, job_id=None, topi
     if job_id and topic and clips_json and script:
         seo = generate_seo_metadata(topic, script, keywords)
         title = seo['title']
-        if variant_id:
+        if title_hook:
+            # Use variant-specific title hook (e.g., "TERRIFYING What fits...", "3 REASONS What fits...")
+            title = f"{title_hook} 😱"[:100]
+        elif variant_id:
+            # Fallback: append variant marker if no title_hook provided
             title = title.replace('😱', f' [{variant_id}] 😱')[:100]
         description = seo['description']
         tags = seo['tags']

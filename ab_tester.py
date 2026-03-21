@@ -1,7 +1,7 @@
 def generate_ab_variants(topic: str, base_script: str, keywords: list[str]) -> list[dict]:
     """
     Returns list of 3 variant dicts for A/B testing.
-    Each variant has different hook + ending question.
+    Each variant has different hook + ending question + unique title hook.
     """
     
     # Extract core facts from base script (skip first sentence, keep middle-end)
@@ -11,35 +11,41 @@ def generate_ab_variants(topic: str, base_script: str, keywords: list[str]) -> l
     # Get main topic word
     topic_word = topic.split()[0].capitalize() if topic else "This"
     
-    # Variant A: Shock hook
+    # Variant A: Shock hook with TERRIFYING title
     hook_a = f"Your {topic_word.lower()} does something TERRIFYING."
     question_a = "Have you ever noticed this?"
     script_a = f"{hook_a} {core_facts} {question_a}"[:180].strip()
+    title_hook_a = f"TERRIFYING {topic}"
     
-    # Variant B: Curiosity hook
+    # Variant B: Curiosity hook with SHOCKING title  
     hook_b = f"Ever wondered why {topic_word.lower()}s are so weird?"
     question_b = "Tell me in the comments below!"
     script_b = f"{hook_b} {core_facts} {question_b}"[:180].strip()
+    title_hook_b = f"SHOCKING {topic}"
     
-    # Variant C: Number hook
+    # Variant C: Number hook with "3 FACTS" title
     hook_c = f"3 shocking facts about {topic_word.lower()}s revealed."
     question_c = "Which one shocked you most?"
     script_c = f"{hook_c} {core_facts} {question_c}"[:180].strip()
+    title_hook_c = f"3 REASONS {topic}"
     
     return [
         {
             "variant": "A",
             "script": script_a,
-            "title_hook": "TERRIFYING"
+            "title_hook": title_hook_a,
+            "hook_name": "Shock"
         },
         {
             "variant": "B",
             "script": script_b,
-            "title_hook": "SHOCKING"
+            "title_hook": title_hook_b,
+            "hook_name": "Curiosity"
         },
         {
             "variant": "C",
             "script": script_c,
-            "title_hook": "3 FACTS"
+            "title_hook": title_hook_c,
+            "hook_name": "Number"
         }
     ]
