@@ -10,7 +10,7 @@ import time
 import shutil
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import dict, list
+from typing import Dict, List
 
 
 class PerformanceOptimizer:

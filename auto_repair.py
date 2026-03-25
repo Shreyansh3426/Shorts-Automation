@@ -7,7 +7,7 @@ Implements retry logic with exponential backoff and fallback strategies.
 import os
 import time
 import logging
-from typing import Callable, Any
+from typing import Callable, Any, Optional
 
 logger = logging.getLogger(__name__)
 
@@ -45,7 +45,7 @@ class AutoRepair:
     }
     
     @staticmethod
-    def classify_error(error_message: str) -> str | None:
+    def classify_error(error_message: str) -> Optional[str]:
         """Identify error type from error message."""
         error_lower = error_message.lower()
         
@@ -93,7 +93,7 @@ class AutoRepair:
             raise
     
     @staticmethod
-    def handle_missing_file(file_path: str, fallback_path: str = None) -> str | None:
+    def handle_missing_file(file_path: str, fallback_path: str = None) -> Optional[str]:
         """Handle missing file gracefully with fallback options."""
         if os.path.exists(file_path):
             return file_path

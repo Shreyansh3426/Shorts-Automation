@@ -8,7 +8,7 @@ import json
 import os
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import dict, list
+from typing import Dict, List
 
 class QualityDashboard:
     """Comprehensive quality metrics aggregator."""

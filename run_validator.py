@@ -7,7 +7,7 @@ Ensures all expected artifacts are generated and valid.
 import os
 import json
 from pathlib import Path
-from typing import dict, list, tuple
+from typing import Dict, List, Tuple
 
 class RunValidator:
     """Validates pipeline run outputs and completeness."""
@@ -109,7 +109,7 @@ class RunValidator:
         
         return result
     
-    def validate_file_integrity(self, file_path: str) -> tuple[bool, str]:
+    def validate_file_integrity(self, file_path: str) -> Tuple[bool, str]:
         """Validate file integrity and format."""
         if not os.path.exists(file_path):
             return False, "File does not exist"

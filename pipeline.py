@@ -8,7 +8,7 @@ from db import init_db, create_job, update_job, get_job
 from ab_tester import generate_ab_variants
 from alerts import send_failure_alert
 from diagnostics import DiagnosticsCollector, format_diagnostic_summary
-from auto_repair import AutoRepair, retry_with_backoff
+from auto_repair import AutoRepair
 from anomaly_detector import AnomalyDetector, format_anomaly_report, get_recommendations
 from run_validator import RunValidator, format_validation_report
 from quality_dashboard import QualityDashboard, format_dashboard, get_alerts_from_dashboard
