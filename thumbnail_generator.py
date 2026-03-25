@@ -1,12 +1,13 @@
 import os
 import subprocess
 import logging
+from typing import List, Optional
 from PIL import Image, ImageDraw, ImageFont
 
 logger = logging.getLogger(__name__)
 
 
-def generate_thumbnail(job_id: str, topic: str, clips_json: list[str], variant_id: str | None = None) -> str:
+def generate_thumbnail(job_id: str, topic: str, clips_json: List[str], variant_id: Optional[str] = None) -> str:
     """
     Generates a high-CTR YouTube Shorts thumbnail using one of the clips.
     Returns the full path to thumbnail.jpg

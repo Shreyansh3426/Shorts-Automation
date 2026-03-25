@@ -1,4 +1,6 @@
-def generate_seo_metadata(topic: str, script: str, keywords: list[str] | None = None) -> dict:
+from typing import List, Optional, Dict
+
+def generate_seo_metadata(topic: str, script: str, keywords: Optional[List[str]] = None) -> Dict:
     """
     Returns dict with title, description, tags optimized for 2026 YouTube Shorts.
     Extremely high-CTR, keyword-rich, curiosity-driven.
