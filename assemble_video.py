@@ -121,7 +121,9 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     with open(srt_path, 'w') as f:
         f.write('\n'.join(srt_lines))
 
-    print("Subtitles generated (4-word formula)")
+    # Verify SRT file exists and has content
+    srt_size = os.path.getsize(srt_path) if os.path.exists(srt_path) else 0
+    print(f"✅ Subtitles generated (4-word formula): {srt_size} bytes")
 
     # 🎵 Music (Optional - check if available)
     music_dir = os.path.join(os.path.dirname(__file__), 'assets', 'music')
@@ -158,7 +160,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             '-map', '0:v',
             '-map', '[aout]',
 
-            '-vf', f"subtitles={srt_path}:force_style='MarginV=180'",
+            '-vf', f"subtitles='{srt_path}':force_style='MarginV=180'",
 
             '-c:v', 'libx264',
             '-preset', 'fast',
@@ -182,7 +184,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             '-map', '0:v',
             '-map', '1:a',
 
-            '-vf', f"subtitles={srt_path}:force_style='MarginV=180'",
+            '-vf', f"subtitles='{srt_path}':force_style='MarginV=180'",
 
             '-c:v', 'libx264',
             '-preset', 'fast',

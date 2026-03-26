@@ -106,6 +106,13 @@ def init_db():
                 comments INTEGER DEFAULT 0,
                 last_checked TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            CREATE TABLE IF NOT EXISTS clip_usage (
+                clip_url TEXT PRIMARY KEY,
+                job_ids TEXT,
+                last_used TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                excluded INTEGER DEFAULT 0
+            );
         ''')
         conn.commit()
         print('✅ Database initialized successfully')
