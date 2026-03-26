@@ -142,7 +142,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     # 🎬 FINAL RENDER
     if music_path:
         # Professional sidechain ducking: Music volume ducks when voice is speaking
-        # Setup: Voice acts as sidechain input to compress background music
+        # Setup: Voice + Music mix (simple volume mixing, no complex sidechain)
         ffmpeg_cmd = [
             'ffmpeg', '-y',
             '-i', bg_video,
@@ -150,11 +150,10 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             '-i', music_path,
 
             '-filter_complex',
-            # Sidechain ducking: music ducks automatically when voice is loud
-            '[2:a]aformat=sample_rates=44100[music];'
-            '[1:a]aformat=sample_rates=44100[voice];'
-            '[music][voice]acompressor=threshold=0.1:ratio=4:attack=50:release=200:makeup=3[music_compressed];'
-            '[voice][music_compressed]amix=inputs=2:duration=first[aout]',
+            # Simple audio mix: voice at full volume, music reduced to 40%
+            '[2:a]volume=0.4[music];'
+            '[1:a]volume=1.0[voice];'
+            '[voice][music]amix=inputs=2:duration=first[aout]',
 
             '-map', '0:v',
             '-map', '[aout]',
