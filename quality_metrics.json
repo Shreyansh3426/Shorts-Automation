@@ -1,0 +1,74 @@
+{
+  "pipeline_health": {
+    "total_runs": 3,
+    "successful_runs": 0,
+    "failed_runs": 3,
+    "success_rate": 0.0,
+    "avg_duration_sec": 1030.9357515176137
+  },
+  "content_metrics": {
+    "total_videos": 0,
+    "total_variants": 0,
+    "avg_views": 0,
+    "avg_engagement_rate": 0.0,
+    "total_views": 0
+  },
+  "performance": {
+    "stage_durations": {
+      "script_generation": [
+        1.4912059307098389,
+        1.6522831916809082,
+        1.341731071472168
+      ],
+      "voice_generation": [
+        6.095098972320557,
+        4.699548006057739,
+        5.296220064163208
+      ],
+      "visual_fetching": [
+        5.675368785858154,
+        11.797295093536377,
+        7.323742866516113
+      ],
+      "video_assembly": [
+        103.86419606208801,
+        183.52817916870117,
+        120.09112906455994
+      ]
+    },
+    "api_calls": {},
+    "error_rate": 3.0
+  },
+  "system_health": {
+    "disk_usage_trend": [
+      {
+        "timestamp": "2026-03-25T21:43:40.272990",
+        "usage_percent": 0
+      },
+      {
+        "timestamp": "2026-03-25T22:22:24.768969",
+        "usage_percent": 0
+      },
+      {
+        "timestamp": "2026-03-25T22:29:38.438417",
+        "usage_percent": 0
+      }
+    ],
+    "memory_usage_trend": [
+      {
+        "timestamp": "2026-03-25T21:43:40.273013",
+        "usage_percent": 0
+      },
+      {
+        "timestamp": "2026-03-25T22:22:24.768989",
+        "usage_percent": 0
+      },
+      {
+        "timestamp": "2026-03-25T22:29:38.438438",
+        "usage_percent": 0
+      }
+    ],
+    "error_frequency": {}
+  },
+  "updated_at": "2026-03-25T22:29:38.438450"
+}
