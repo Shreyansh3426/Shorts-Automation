@@ -24,26 +24,39 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
     seg_duration = voice_duration / len(clips)
     print(f'Voice duration: {voice_duration:.2f}s | Segment: {seg_duration:.2f}s')
 
-    # 🎬 Process clips
+    # 🎬 Process clips (with timeout protection)
     processed = []
     for i, clip in enumerate(clips):
         out = f'{tmpdir}/clip{i}.mp4'
 
-        subprocess.run([
-            'ffmpeg', '-y', '-i', clip['path'],
-            '-t', str(seg_duration),
-            '-vf',
-            "scale=1920:1920:force_original_aspect_ratio=increase,"
-            "crop=1080:1920,fps=30,"
-            "zoompan=z='min(zoom+0.0015,1.5)':d=1:"
-            "x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s=1080x1920,"
-            "eq=brightness=0.01:saturation=1.05",
-            '-an',
-            '-c:v', 'libx264',
-            '-preset', 'fast',
-            '-crf', '23',
-            out
-        ], check=True)
+        try:
+            subprocess.run([
+                'ffmpeg', '-y', '-i', clip['path'],
+                '-t', str(seg_duration),
+                '-vf',
+                "scale=1920:1920:force_original_aspect_ratio=increase,"
+                "crop=1080:1920,fps=30,"
+                "eq=brightness=0.01:saturation=1.05",
+                '-an',
+                '-c:v', 'libx264',
+                '-preset', 'fast',
+                '-crf', '23',
+                out
+            ], check=True, timeout=120)
+        except subprocess.TimeoutExpired:
+            print(f'⚠️  Timeout on clip {i} - retrying with simpler filter')
+            subprocess.run([
+                'ffmpeg', '-y', '-i', clip['path'],
+                '-t', str(seg_duration),
+                '-vf',
+                "scale=1080:1920:force_original_aspect_ratio=decrease,"
+                "pad=1080:1920:(ow-iw)/2:(oh-ih)/2,fps=30",
+                '-an',
+                '-c:v', 'libx264',
+                '-preset', 'ultrafast',
+                '-crf', '25',
+                out
+            ], check=True, timeout=120)
 
         processed.append(out)
 
@@ -61,7 +74,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
         '-i', concat_file,
         '-c', 'copy',
         bg_video
-    ], check=True)
+    ], check=True, timeout=180)
 
     # 🧠 Whisper model
     model = WhisperModel('tiny', device='cpu', compute_type='int8')
@@ -185,7 +198,7 @@ def assemble_video(topic_id, clips_json, voice_path, output_path):
             output_path
         ]
     
-    subprocess.run(ffmpeg_cmd, check=True)
+    subprocess.run(ffmpeg_cmd, check=True, timeout=300)
 
     print(json.dumps({
         'video_path': output_path,
