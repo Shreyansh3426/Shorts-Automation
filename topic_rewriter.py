@@ -122,5 +122,5 @@ def rewrite_all():
 
 
 # 🚀 ENTRY POINT
-if __name__ == "_main__":
+if __name__ == "__main__":
     rewrite_all()

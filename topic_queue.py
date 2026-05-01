@@ -60,8 +60,8 @@ def queue_topics(niche='dark psychology and human behavior', count=20):
         conn = get_conn()
         try:
             conn.execute(
-                'INSERT INTO topics (title, source, score) VALUES (?, ?, ?)',
-                (topic, 'ai_generated', 8.0)
+                'INSERT INTO topics (topic, score) VALUES (?, ?)',
+                (topic, 8.0)
             )
             conn.commit()
             print(f'  + {topic}')
@@ -77,7 +77,7 @@ def get_next_topic():
     init_db()
     conn = get_conn()
     row = conn.execute(
-        "SELECT id, title FROM topics WHERE used = 0 ORDER BY score DESC, created_at ASC LIMIT 1"
+        "SELECT id, topic FROM topics WHERE used = 0 ORDER BY score DESC, created_at ASC LIMIT 1"
     ).fetchone()
     conn.close()
     return dict(row) if row else None

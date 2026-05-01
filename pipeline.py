@@ -297,7 +297,7 @@ if __name__ == '__main__':
             if not topic_row:
                 print('No topics in queue. Run: python3 topic_queue.py')
                 sys.exit(1)
-            topic = topic_row['title']
+            topic = topic_row['topic']
             topic_id = topic_row['id']
             print(f'Auto-picked topic from queue: {topic}')
             result = run_pipeline(topic)
